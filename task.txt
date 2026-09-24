@@ -1,0 +1,80 @@
+# Task: Custom RGB Controller for Acer Predator Helios 16 AI
+
+## Machine
+
+Laptop: **Acer Predator Helios 16 AI**
+Model identifier: **N25Q2 / PH16-73**
+
+Operating systems:
+
+* Windows 11
+* Ubuntu 24.04
+
+The laptop has several RGB lighting systems:
+
+* Per-key RGB keyboard
+* MilkyWay rear RGB lighting
+* Cover logo lighting
+* InfiniteRing L-shape / palm-rest lighting
+
+## Current Situation
+
+On Windows, Acer provides **PredatorSense**, which controls the laptop's RGB lighting.
+
+I have two problems with it:
+
+1. I do not like the predefined RGB patterns and want to be able to create my own custom patterns.
+2. On Ubuntu, the RGB lighting does not work properly and Acer does not provide PredatorSense for Linux.
+
+There is an existing Linux project:
+
+https://github.com/cleyton1986/predator-sense
+
+However, it was built for different Acer Predator models. It can be investigated as a reference, but **do not assume its hardware addresses, protocol, commands, or implementation apply to N25Q2 / PH16-73.**
+
+## Goal
+
+Build an application that works on both:
+
+* Windows 11
+* Ubuntu 24.04
+
+The application should allow me to:
+
+* Control the laptop's RGB LEDs.
+* Control the different lighting systems supported by this laptop.
+* Create and run my own custom RGB patterns instead of being limited to PredatorSense's predefined patterns.
+
+## Investigation
+
+Before implementing hardware control, determine how **this exact laptop model** communicates with its RGB hardware.
+
+Do not assume how the LEDs are controlled.
+
+Investigate the actual mechanism used by **N25Q2 / PH16-73** and by PredatorSense.
+
+I am currently on **Windows 11** and have the official PredatorSense installed.
+
+If reverse engineering PredatorSense is useful, tell me exactly what you need me to do. For example, I can change specific colors/effects/settings in PredatorSense while we inspect what communication occurs.
+
+Use controlled tests where useful so that individual PredatorSense actions can be correlated with the underlying commands.
+
+## Development Environments
+
+### Windows
+
+Create a **new local Python virtual environment for this project** and use it for all Python work.
+
+### Ubuntu
+
+Use my existing Python environment:
+
+`NM_ENV`
+
+## Important
+
+* Do not guess hardware addresses, device IDs, protocols, or commands.
+* Do not assume another Predator model behaves the same way.
+* Verify findings on this exact model.
+* Use the existing `predator-sense` repository as reference material only where applicable.
+* Follow the engineering practices defined in `INSTRUCTIONS.md`.
