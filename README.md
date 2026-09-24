@@ -56,7 +56,8 @@ python -m led_studio.cli release     # hand control back to the firmware
 ```
 
 Configuration is read from `LED_STUDIO_*` environment variables (`DATA_DIR`, `HOST`, `PORT`,
-`FPS`). Saved patterns live in `%LOCALAPPDATA%\led-studio` on Windows and
+`FPS`). The API has no authentication, so it only binds to loopback addresses and rejects
+requests whose `Host`/`Origin` is not this machine (blocks cross-site requests from web pages). Saved patterns live in `%LOCALAPPDATA%\led-studio` on Windows and
 `~/.local/share/led-studio` on Linux, and the last applied pattern is restored on startup.
 
 ### Ubuntu notes
