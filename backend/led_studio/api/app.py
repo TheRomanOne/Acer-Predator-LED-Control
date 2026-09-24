@@ -7,6 +7,7 @@ from collections.abc import AsyncIterator, Iterator, Sequence
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, status
 
+from led_studio.api.local_only import LocalOnlyMiddleware
 from led_studio.api.schemas import (
     ApplyIn,
     DeviceOut,
@@ -68,6 +69,7 @@ def create_app(zones: Sequence[Zone], store: PatternStore, fps: int) -> FastAPI:
             player.close()
 
     app = FastAPI(title="LED Studio", lifespan=lifespan)
+    app.add_middleware(LocalOnlyMiddleware)
 
     @app.get("/api/devices")
     def list_devices() -> list[DeviceOut]:

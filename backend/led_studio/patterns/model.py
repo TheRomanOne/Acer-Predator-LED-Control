@@ -12,6 +12,11 @@ from pydantic import BaseModel, ConfigDict, Field
 UnitFloat = Annotated[float, Field(ge=0.0, le=1.0)]
 Channel = Annotated[int, Field(ge=0, le=255)]
 
+# Upper bounds keep a single pattern renderable at 30 fps; well above any real design.
+MAX_LAYERS = 32
+MAX_LIST_ITEMS = 64  # gradient stops, wave colours, keyframes
+MAX_PAINTED_LAMPS = 512
+
 
 class _Strict(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -34,7 +39,7 @@ class Gradient(_Strict):
         color: Color
 
     type: Literal["gradient"] = "gradient"
-    stops: list[Stop] = Field(min_length=2)
+    stops: list[Stop] = Field(min_length=2, max_length=MAX_LIST_ITEMS)
     angle_deg: float = 0.0
 
 
@@ -42,7 +47,7 @@ class Wave(_Strict):
     """Colours cycling along a direction, drifting over time."""
 
     type: Literal["wave"] = "wave"
-    colors: list[Color] = Field(min_length=1)
+    colors: list[Color] = Field(min_length=1, max_length=MAX_LIST_ITEMS)
     speed: float = 0.5  # cycles per second; negative reverses direction
     wavelength: Annotated[float, Field(gt=0.0)] = 1.0  # fraction of the device span per cycle
     angle_deg: float = 0.0
@@ -66,7 +71,7 @@ class Paint(_Strict):
     """Explicit per-lamp colours (per-key painting). Unlisted lamps are transparent."""
 
     type: Literal["paint"] = "paint"
-    colors: dict[int, Color] = Field(default_factory=dict)
+    colors: dict[int, Color] = Field(default_factory=dict, max_length=MAX_PAINTED_LAMPS)
 
 
 class Ripple(_Strict):
@@ -86,7 +91,7 @@ class Keyframes(_Strict):
         color: Color
 
     type: Literal["keyframes"] = "keyframes"
-    frames: list[Frame] = Field(min_length=1)
+    frames: list[Frame] = Field(min_length=1, max_length=MAX_LIST_ITEMS)
     interpolate: bool = True
 
 
@@ -107,7 +112,7 @@ class PatternBody(_Strict):
     """Everything the user authors; the id is assigned by storage."""
 
     name: Annotated[str, Field(min_length=1, max_length=100)]
-    layers: list[Layer] = Field(default_factory=list)
+    layers: list[Layer] = Field(default_factory=list, max_length=MAX_LAYERS)
     brightness: UnitFloat = 1.0
 
 

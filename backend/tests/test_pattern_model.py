@@ -1,7 +1,7 @@
 import pytest
 from pydantic import ValidationError
 
-from led_studio.patterns.model import Color, Gradient, Layer, Pattern, Solid
+from led_studio.patterns.model import Color, Gradient, Layer, Paint, Pattern, Solid
 
 
 def test_pattern_round_trips_through_json() -> None:
@@ -46,6 +46,19 @@ def test_gradient_requires_two_stops() -> None:
 def test_color_channels_are_bounded() -> None:
     with pytest.raises(ValidationError):
         Color(r=300, g=0, b=0)
+
+
+def test_pattern_size_is_bounded() -> None:
+    solid = Layer(effect=Solid(color=Color(r=0, g=0, b=0)))
+    with pytest.raises(ValidationError, match="layers"):
+        Pattern(id="x", name="x", layers=[solid] * 33)
+
+    with pytest.raises(ValidationError, match="colors"):
+        Paint(colors={i: Color(r=0, g=0, b=0) for i in range(513)})
+
+    stop = Gradient.Stop(position=0, color=Color(r=0, g=0, b=0))
+    with pytest.raises(ValidationError, match="stops"):
+        Gradient(stops=[stop] * 65)
 
 
 def test_brightness_and_opacity_are_unit_interval() -> None:

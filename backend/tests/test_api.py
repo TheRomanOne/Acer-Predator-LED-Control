@@ -9,6 +9,10 @@ from led_studio.patterns.model import PatternBody
 from led_studio.storage.patterns import PatternStore
 from tests.fakes import FakeLampArrayTransport, make_fake_zone
 
+# The API only serves loopback hosts; TestClient's default "testserver" host would be refused.
+LOCAL_BASE_URL = "http://localhost"
+FRAMES_WS = "ws://localhost/api/ws/frames"  # websocket_connect ignores base_url
+
 SOLID_RED = {
     "name": "Red",
     "layers": [{"effect": {"type": "solid", "color": {"r": 255, "g": 0, "b": 0}}}],
@@ -33,7 +37,7 @@ def client(
     ring, ring_transport = make_fake_zone("0d62:a20a:1", "InfiniteRing", lamp_count=2, kind=7)
     transports.update({"kb": kb_transport, "ring": ring_transport})
     app = create_app(zones=[keyboard, ring], store=store, fps=100)
-    with TestClient(app) as client:
+    with TestClient(app, base_url=LOCAL_BASE_URL) as client:
         yield client
 
 
@@ -119,14 +123,15 @@ def test_active_pattern_is_restored_on_startup(store: PatternStore) -> None:
     store.set_active_pattern_id(pattern.id)
     zone, transport = make_fake_zone()
 
-    with TestClient(create_app(zones=[zone], store=store, fps=100)) as client:
+    app = create_app(zones=[zone], store=store, fps=100)
+    with TestClient(app, base_url=LOCAL_BASE_URL) as client:
         assert client.get("/api/playback").json()["pattern_id"] == pattern.id
         assert transport.sent[0] == b"\x70\x00"
 
 
 def test_status_reports_playback_and_per_zone_health(client: TestClient) -> None:
     client.post("/api/playback/preview", json=SOLID_RED)
-    with client.websocket_connect("/api/ws/frames") as ws:
+    with client.websocket_connect(FRAMES_WS) as ws:
         ws.receive_json()
         ws.receive_json()  # two frames: enough to measure a rate
 
@@ -140,10 +145,40 @@ def test_status_reports_playback_and_per_zone_health(client: TestClient) -> None
     assert zones["05af:667a:0"]["last_error"] is None
 
 
+@pytest.mark.parametrize("origin", ["http://localhost:5173", "http://127.0.0.1:5173"])
+def test_local_origins_are_allowed(client: TestClient, origin: str) -> None:
+    response = client.post("/api/playback/stop", headers={"Origin": origin})
+
+    assert response.status_code == 200
+
+
+def test_foreign_origin_is_rejected(client: TestClient) -> None:
+    response = client.post("/api/playback/stop", headers={"Origin": "http://evil.example"})
+
+    assert response.status_code == 403
+
+
+def test_foreign_host_header_is_rejected(client: TestClient) -> None:
+    # DNS rebinding: the browser reaches 127.0.0.1 but sends the attacker's hostname.
+    response = client.get("/api/devices", headers={"Host": "evil.example"})
+
+    assert response.status_code == 403
+
+
+def test_websocket_from_foreign_origin_is_refused(client: TestClient) -> None:
+    from starlette.websockets import WebSocketDisconnect
+
+    with (
+        pytest.raises(WebSocketDisconnect),
+        client.websocket_connect(FRAMES_WS, headers={"Origin": "http://evil.example"}),
+    ):
+        pass
+
+
 def test_frames_are_streamed_over_websocket(client: TestClient) -> None:
     client.post("/api/playback/preview", json=SOLID_RED)
 
-    with client.websocket_connect("/api/ws/frames") as ws:
+    with client.websocket_connect(FRAMES_WS) as ws:
         frame = ws.receive_json()
 
     assert frame["05af:667a:0"] == [[255, 0, 0]] * 4
