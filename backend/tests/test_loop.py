@@ -27,6 +27,26 @@ async def test_loop_pushes_frames_at_the_requested_rate_and_notifies_listeners()
 
 
 @pytest.mark.asyncio
+async def test_loop_periodically_reasserts_control_against_competing_software() -> None:
+    zone, transport = make_fake_zone(lamp_count=2)
+    player = Player([zone])
+    loop = PlaybackLoop(player, fps=100, on_frame=lambda f: None, reassert_control_s=0.03)
+    player.play(Pattern(id="p", name="p", layers=[Layer(effect=Rainbow(speed=0.0))]))
+    transport.sent.clear()
+
+    task = asyncio.create_task(loop.run())
+    await asyncio.sleep(0.15)
+    task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await task
+
+    control_writes = [r for r in transport.sent if r == b"\x70\x00"]
+    assert 2 <= len(control_writes) <= 6
+    # a static pattern is still repainted after each re-assert
+    assert len([r for r in transport.sent if r[0] == 0x50]) >= len(control_writes)
+
+
+@pytest.mark.asyncio
 async def test_loop_is_idle_when_nothing_is_playing() -> None:
     zone, transport = make_fake_zone()
     loop = PlaybackLoop(Player([zone]), fps=100, on_frame=lambda f: None)

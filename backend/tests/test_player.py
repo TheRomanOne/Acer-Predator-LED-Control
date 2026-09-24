@@ -111,6 +111,29 @@ def test_stop_blanks_the_zones_before_releasing() -> None:
     assert transport.sent[-1] == b"\x70\x01"
 
 
+def test_reassert_control_retakes_zones_and_forces_a_full_repaint() -> None:
+    zone, transport = make_zone(lamp_count=3)
+    player = Player([zone])
+    player.play(solid())
+    player.render_and_push(t=0.0)
+    transport.sent.clear()
+
+    player.reassert_control()
+    player.render_and_push(t=0.1)
+
+    assert transport.sent[0] == b"\x70\x00"
+    assert any(r[0] == 0x60 and r[6:9] == bytes([255, 0, 0]) for r in transport.sent[1:])
+
+
+def test_reassert_control_is_a_no_op_when_idle() -> None:
+    zone, transport = make_zone()
+    player = Player([zone])
+
+    player.reassert_control()
+
+    assert transport.sent == []
+
+
 def test_frames_are_rendered_relative_to_play_start() -> None:
     zone, _ = make_zone()
     player = Player([zone], clock=lambda: 100.0)

@@ -32,6 +32,17 @@ class Player:
         self.current = pattern
         self._started_at = self._clock()
 
+    def reassert_control(self) -> None:
+        """Retake the zones from competing software (e.g. the vendor lighting service).
+
+        Whatever it displayed in the meantime is unknown, so the next frame repaints fully.
+        """
+        if self.current is None:
+            return
+        for zone in self._zones.values():
+            zone.array.take_control()
+        self._shown.clear()
+
     def elapsed(self) -> float:
         return self._clock() - self._started_at
 
