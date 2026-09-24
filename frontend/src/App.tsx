@@ -26,7 +26,10 @@ export default function App() {
   const frame = useFrames(playing)
 
   const run = (work: Promise<unknown>) =>
-    work.catch((e: Error) => setError(e.message)).then(() => setError(null))
+    work.then(
+      () => setError(null),
+      (e: Error) => setError(e.message),
+    )
 
   useDebouncedEffect(editor.draft, PREVIEW_DEBOUNCE_MS, (draft) => {
     if (livePreview) run(api.preview(draft).then(setPlayback))
@@ -125,7 +128,11 @@ export default function App() {
           ))}
           {paintTarget && (
             <p className="hint">
-              Painting <strong>{paintTarget.devices?.[0] ?? '…'}</strong>: click lamps to colour them.
+              Painting{' '}
+              <strong>
+                {devices.find((d) => d.id === paintTarget.devices?.[0])?.name ?? 'any zone'}
+              </strong>
+              : click lamps to colour them with the brush.
             </p>
           )}
         </main>

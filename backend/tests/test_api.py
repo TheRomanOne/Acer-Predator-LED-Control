@@ -114,9 +114,7 @@ def test_deleting_the_active_pattern_stops_playback(client: TestClient) -> None:
     assert client.get("/api/playback").json()["pattern_id"] is None
 
 
-def test_active_pattern_is_restored_on_startup(
-    store: PatternStore, transports: dict[str, FakeLampArrayTransport]
-) -> None:
+def test_active_pattern_is_restored_on_startup(store: PatternStore) -> None:
     pattern = store.create(PatternBody.model_validate(SOLID_RED))
     store.set_active_pattern_id(pattern.id)
     zone, transport = make_fake_zone()

@@ -38,14 +38,17 @@ export function useFrames(playing: boolean): Frame | null {
 /** Calls `effect` once `value` has stopped changing for `delayMs`, skipping the first render. */
 export function useDebouncedEffect<T>(value: T, delayMs: number, effect: (value: T) => void) {
   const first = useRef(true)
+  // Callers pass a fresh closure every render; keep the latest one without re-arming the timer.
+  const latest = useRef(effect)
+  useEffect(() => {
+    latest.current = effect
+  })
   useEffect(() => {
     if (first.current) {
       first.current = false
       return
     }
-    const handle = setTimeout(() => effect(value), delayMs)
+    const handle = setTimeout(() => latest.current(value), delayMs)
     return () => clearTimeout(handle)
-    // `effect` is intentionally not a dependency: callers pass fresh closures every render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value, delayMs])
 }

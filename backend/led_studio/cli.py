@@ -1,7 +1,7 @@
-"""Developer CLI: list the LampArray devices and light them up for identification.
+"""Developer CLI: list the LampArray zones and light them up for identification.
 
 python -m led_studio.cli list
-python -m led_studio.cli identify          # each array in turn, distinct colour
+python -m led_studio.cli identify          # each zone in turn, distinct colour
 python -m led_studio.cli fill <id> R G B   # e.g. fill 05af:667a:0 255 0 0
 python -m led_studio.cli release           # hand control back to firmware
 """
@@ -9,63 +9,62 @@ python -m led_studio.cli release           # hand control back to firmware
 import argparse
 import sys
 import time
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 
-from led_studio.devices.lamparray import LampArray
+from led_studio.devices.zone import Zone, open_zones
 from led_studio.hid.reports import Rgb, kind_name
-from led_studio.hid.transport import HidapiTransport, HidDeviceInfo, enumerate_lamparray_devices
 
 IDENTIFY_COLORS = [Rgb(255, 0, 0), Rgb(0, 255, 0), Rgb(0, 0, 255), Rgb(255, 255, 0)]
 
 
-def _open(info: HidDeviceInfo) -> LampArray:
-    return LampArray.open(HidapiTransport(info))
+@contextmanager
+def zones() -> Iterator[list[Zone]]:
+    opened = open_zones()
+    try:
+        yield opened
+    finally:
+        for zone in opened:
+            zone.array.close()
+
+
+def describe(zone: Zone) -> str:
+    a = zone.array.attributes
+    return (
+        f"{zone.id:<16} {zone.name:<14} {kind_name(a.kind):<9} {a.lamp_count:>3} lamps  "
+        f"{a.width_um / 1000:.0f}x{a.height_um / 1000:.0f} mm"
+    )
 
 
 def cmd_list(_: argparse.Namespace) -> None:
-    for info in enumerate_lamparray_devices():
-        array = _open(info)
-        try:
-            a = array.attributes
-            print(
-                f"{info.id:<16} {info.product:<12} {kind_name(a.kind):<9} "
-                f"{a.lamp_count:>3} lamps  {a.width_um / 1000:.0f}x{a.height_um / 1000:.0f} mm"
-            )
-        finally:
-            array.close()
+    with zones() as opened:
+        for zone in opened:
+            print(describe(zone))
 
 
 def cmd_identify(args: argparse.Namespace) -> None:
-    for info, color in zip(enumerate_lamparray_devices(), IDENTIFY_COLORS, strict=False):
-        array = _open(info)
-        try:
-            print(f"{info.id} ({kind_name(array.kind)}, {array.lamp_count} lamps) -> {color}")
-            array.take_control()
-            array.fill(color)
+    with zones() as opened:
+        for zone, color in zip(opened, IDENTIFY_COLORS, strict=False):
+            print(f"{describe(zone)} -> {color}")
+            zone.array.take_control()
+            zone.array.fill(color)
             time.sleep(args.seconds)
-        finally:
-            array.close()
     print("Done. Run `release` to give control back to the firmware.")
 
 
 def cmd_fill(args: argparse.Namespace) -> None:
-    info = next((d for d in enumerate_lamparray_devices() if d.id == args.device), None)
-    if info is None:
-        sys.exit(f"no LampArray device with id {args.device!r}; see `list`")
-    array = _open(info)
-    try:
-        array.take_control()
-        array.fill(Rgb(args.red, args.green, args.blue))
-    finally:
-        array.close()
+    with zones() as opened:
+        zone = next((z for z in opened if z.id == args.device), None)
+        if zone is None:
+            sys.exit(f"no LampArray zone with id {args.device!r}; see `list`")
+        zone.array.take_control()
+        zone.array.fill(Rgb(args.red, args.green, args.blue))
 
 
 def cmd_release(_: argparse.Namespace) -> None:
-    for info in enumerate_lamparray_devices():
-        array = _open(info)
-        try:
-            array.release_control()
-        finally:
-            array.close()
+    with zones() as opened:
+        for zone in opened:
+            zone.array.release_control()
 
 
 def main(argv: list[str] | None = None) -> None:
@@ -83,7 +82,8 @@ def main(argv: list[str] | None = None) -> None:
     fill.set_defaults(run=cmd_fill)
     sub.add_parser("release").set_defaults(run=cmd_release)
     args = parser.parse_args(argv)
-    args.run(args)
+    run: Callable[[argparse.Namespace], None] = args.run
+    run(args)
 
 
 if __name__ == "__main__":
