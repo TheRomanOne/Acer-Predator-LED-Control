@@ -24,6 +24,14 @@ class LampArrayKind(IntEnum):
     ART = 10
 
 
+def kind_name(kind: int) -> str:
+    """Human label for a LampArrayKind, tolerating values outside the spec."""
+    try:
+        return LampArrayKind(kind).name.lower()
+    except ValueError:
+        return f"kind-{kind}"
+
+
 class LampPurpose(IntFlag):
     CONTROL = 0x01
     ACCENT = 0x02

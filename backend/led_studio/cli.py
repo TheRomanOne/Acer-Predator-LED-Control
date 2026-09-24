@@ -11,17 +11,10 @@ import sys
 import time
 
 from led_studio.devices.lamparray import LampArray
-from led_studio.hid.reports import LampArrayKind, Rgb
+from led_studio.hid.reports import Rgb, kind_name
 from led_studio.hid.transport import HidapiTransport, HidDeviceInfo, enumerate_lamparray_devices
 
 IDENTIFY_COLORS = [Rgb(255, 0, 0), Rgb(0, 255, 0), Rgb(0, 0, 255), Rgb(255, 255, 0)]
-
-
-def _kind_name(kind: int) -> str:
-    try:
-        return LampArrayKind(kind).name.lower()
-    except ValueError:
-        return f"kind-{kind}"
 
 
 def _open(info: HidDeviceInfo) -> LampArray:
@@ -34,7 +27,7 @@ def cmd_list(_: argparse.Namespace) -> None:
         try:
             a = array.attributes
             print(
-                f"{info.id:<16} {info.product:<12} {_kind_name(a.kind):<9} "
+                f"{info.id:<16} {info.product:<12} {kind_name(a.kind):<9} "
                 f"{a.lamp_count:>3} lamps  {a.width_um / 1000:.0f}x{a.height_um / 1000:.0f} mm"
             )
         finally:
@@ -45,7 +38,7 @@ def cmd_identify(args: argparse.Namespace) -> None:
     for info, color in zip(enumerate_lamparray_devices(), IDENTIFY_COLORS, strict=False):
         array = _open(info)
         try:
-            print(f"{info.id} ({_kind_name(array.kind)}, {array.lamp_count} lamps) -> {color}")
+            print(f"{info.id} ({kind_name(array.kind)}, {array.lamp_count} lamps) -> {color}")
             array.take_control()
             array.fill(color)
             time.sleep(args.seconds)
