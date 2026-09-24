@@ -23,6 +23,13 @@ frontend/   Node 24 · React 19 · TypeScript      — pattern editor and live p
 
 ## Running
 
+One-shot launchers install everything on first run, start both servers and open the browser:
+
+- Windows: double-click `run_app.cmd` (or run `run_app.ps1` from PowerShell)
+- Ubuntu: `./run_app.sh`
+
+Ctrl+C in that window stops both servers. To run the pieces by hand instead:
+
 Start the backend (it opens the LampArray devices and serves on `127.0.0.1:8765`):
 
 ```bash
