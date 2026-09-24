@@ -7,7 +7,8 @@ from pathlib import Path
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from led_studio.api.local_only import LOOPBACK_HOSTNAMES
+# The API has no authentication; it is only ever served on, and accepted from, these hosts.
+LOOPBACK_HOSTNAMES = frozenset({"localhost", "127.0.0.1", "::1", "[::1]"})
 
 
 def default_data_dir() -> Path:

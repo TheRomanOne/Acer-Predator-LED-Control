@@ -9,12 +9,13 @@ from collections.abc import Awaitable, Callable, MutableMapping
 from typing import Any
 from urllib.parse import urlsplit
 
+from led_studio.config import LOOPBACK_HOSTNAMES
+
 Scope = MutableMapping[str, Any]
 Receive = Callable[[], Awaitable[MutableMapping[str, Any]]]
 Send = Callable[[MutableMapping[str, Any]], Awaitable[None]]
 ASGIApp = Callable[[Scope, Receive, Send], Awaitable[None]]
 
-LOOPBACK_HOSTNAMES = frozenset({"localhost", "127.0.0.1", "::1", "[::1]"})
 _WS_POLICY_VIOLATION = 1008
 
 
