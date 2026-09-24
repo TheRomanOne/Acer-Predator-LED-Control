@@ -7,6 +7,11 @@ description: Disciplined workflow for implementing a feature, bug fix, or behavi
 
 Follow these steps in order. The engineering rules in CLAUDE.md apply throughout.
 
+## 0. Start a branch
+
+- Make sure `main` is clean and up to date, then create the work branch: `git switch -c feature/<slug>` (or `fix/<slug>` for bug fixes).
+- All commits for this task go on that branch. Never commit to `main` directly.
+
 ## 1. Understand the existing design
 
 - Read the relevant code paths, interfaces, tests, and existing patterns before editing.
@@ -51,4 +56,12 @@ Run whatever the project provides: tests, linting, type checks, and formatting. 
 
 ## 8. Self-review
 
-Run the `self-review` skill on the diff before reporting the work as done.
+Run the `self-review` skill on the branch diff (`git diff main...HEAD`) before reporting the work as done.
+
+## 9. Merge
+
+Only once steps 7 and 8 are clean:
+
+- `git switch main`, `git merge --no-ff feature/<slug>` (keeps the feature as one visible unit in history), then `git branch -d feature/<slug>`.
+- If `main` moved while you worked, merge `main` into the branch first, re-run the checks, then merge.
+- Report the merge commit and what was verified.

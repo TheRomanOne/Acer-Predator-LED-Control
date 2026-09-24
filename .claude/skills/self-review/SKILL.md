@@ -7,6 +7,11 @@ description: Final quality checklist for reviewing your own diff before reportin
 
 Read your full diff, then walk through this checklist. Fix every problem you find before reporting the work as done.
 
+## Branch hygiene
+
+- [ ] The work is on a `feature/` or `fix/` branch, not on `main`, and the diff reviewed is `git diff main...HEAD`.
+- [ ] Commits are focused; no unrelated files or generated artefacts are committed.
+
 ## Correctness and scope
 
 - [ ] The change solves the requested problem and nothing unrelated slipped in.

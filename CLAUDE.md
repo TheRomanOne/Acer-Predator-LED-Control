@@ -12,6 +12,13 @@ These rules apply to every code change. Procedures live in skills:
 - Leave the codebase at least as coherent as you found it.
 - **Test-driven.** Write a failing test before the code that makes it pass: red → green → refactor. See `write-tests`.
 
+## Version control
+
+- `main` is always releasable. Never commit directly to it.
+- Every feature or fix is developed on its own branch cut from `main` (`feature/<slug>` or `fix/<slug>`), with small focused commits.
+- Merge back into `main` only after the work is complete: tests, lint and type checks pass, the `self-review` checklist is done, and the change has been verified in the running app where applicable. Delete the branch after merging.
+- Never force-push `main` or rewrite shared history.
+
 ## Web app layout
 
 Web apps keep a firm split into two top-level directories:
