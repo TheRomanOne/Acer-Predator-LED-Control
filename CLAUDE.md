@@ -1,5 +1,11 @@
 # Engineering Rules
 
+## Communication
+
+- Responses are compact and to the point: only what the user needs to act or decide. No restating the request, no narrating routine steps, no repeating what earlier messages already said.
+- Prefer a short list or table over prose when it carries the same information.
+- End every response with a **Bottom line** section: one to three sentences with the outcome and the next action (or the decision needed).
+
 These rules apply to every code change. Procedures live in skills:
 `implement-change` (any feature or fix), `refactor` (structural changes), `write-tests`, and `self-review` (run before declaring work done).
 
