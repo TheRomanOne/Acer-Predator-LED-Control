@@ -3,6 +3,10 @@
 
 $ErrorActionPreference = "Stop"
 $root = $PSScriptRoot
+
+# Pick up tools installed after this shell was opened (winget installs only update the registry).
+$env:Path = [Environment]::GetEnvironmentVariable("Path", "Machine") + ";" +
+    [Environment]::GetEnvironmentVariable("Path", "User")
 $backend = Join-Path $root "backend"
 $frontend = Join-Path $root "frontend"
 $python = Join-Path $backend ".venv\Scripts\python.exe"
