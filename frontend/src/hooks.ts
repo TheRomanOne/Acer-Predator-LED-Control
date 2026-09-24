@@ -35,19 +35,19 @@ export function useFrames(playing: boolean): Frame | null {
   return playing ? frame : null
 }
 
-/** Calls `effect` once `value` has stopped changing for `delayMs`, skipping the first render. */
+/** Calls `effect` once `value` has stopped changing for `delayMs`; the initial value never fires. */
 export function useDebouncedEffect<T>(value: T, delayMs: number, effect: (value: T) => void) {
-  const first = useRef(true)
+  // Compare against the last seen value rather than a "first render" flag: StrictMode runs
+  // mount effects twice, and a flag would fire the effect for the untouched initial value.
+  const seen = useRef(value)
   // Callers pass a fresh closure every render; keep the latest one without re-arming the timer.
   const latest = useRef(effect)
   useEffect(() => {
     latest.current = effect
   })
   useEffect(() => {
-    if (first.current) {
-      first.current = false
-      return
-    }
+    if (Object.is(seen.current, value)) return
+    seen.current = value
     const handle = setTimeout(() => latest.current(value), delayMs)
     return () => clearTimeout(handle)
   }, [value, delayMs])
