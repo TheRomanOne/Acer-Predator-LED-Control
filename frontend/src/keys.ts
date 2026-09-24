@@ -1,0 +1,62 @@
+// HID Usage Tables, Keyboard/Keypad page (0x07): usage id -> short key cap label.
+
+const NAMED: Record<number, string> = {
+  0x28: 'Enter',
+  0x29: 'Esc',
+  0x2a: '⌫',
+  0x2b: 'Tab',
+  0x2c: 'Space',
+  0x2d: '-',
+  0x2e: '=',
+  0x2f: '[',
+  0x30: ']',
+  0x31: '\\',
+  0x32: '#',
+  0x33: ';',
+  0x34: "'",
+  0x35: '`',
+  0x36: ',',
+  0x37: '.',
+  0x38: '/',
+  0x39: 'Caps',
+  0x46: 'PrtSc',
+  0x47: 'ScrLk',
+  0x48: 'Pause',
+  0x49: 'Ins',
+  0x4a: 'Home',
+  0x4b: 'PgUp',
+  0x4c: 'Del',
+  0x4d: 'End',
+  0x4e: 'PgDn',
+  0x4f: '→',
+  0x50: '←',
+  0x51: '↓',
+  0x52: '↑',
+  0x53: 'NumLk',
+  0x54: '/',
+  0x55: '*',
+  0x56: '-',
+  0x57: '+',
+  0x58: 'Enter',
+  0x62: '0',
+  0x63: '.',
+  0x64: '\\',
+  0x65: 'Menu',
+  0xe0: 'Ctrl',
+  0xe1: 'Shift',
+  0xe2: 'Alt',
+  0xe3: 'Win',
+  0xe4: 'Ctrl',
+  0xe5: 'Shift',
+  0xe6: 'Alt',
+  0xe7: 'Win',
+}
+
+export function keyLabel(usage: number): string {
+  if (usage >= 0x04 && usage <= 0x1d) return String.fromCharCode(0x41 + usage - 0x04) // A-Z
+  if (usage >= 0x1e && usage <= 0x26) return String(usage - 0x1e + 1) // 1-9
+  if (usage === 0x27) return '0'
+  if (usage >= 0x3a && usage <= 0x45) return `F${usage - 0x3a + 1}`
+  if (usage >= 0x59 && usage <= 0x61) return String(usage - 0x59 + 1) // keypad 1-9
+  return NAMED[usage] ?? ''
+}
