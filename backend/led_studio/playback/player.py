@@ -14,7 +14,7 @@ BLACK = Rgb(0, 0, 0)
 
 class Player:
     def __init__(self, zones: Sequence[Zone], clock: Callable[[], float] = time.monotonic) -> None:
-        self._zones = list(zones)
+        self._zones = {zone.id: zone for zone in zones}
         self._clock = clock
         self._started_at = 0.0
         self._shown: dict[str, list[Rgb]] = {}  # what each zone currently displays
@@ -23,11 +23,11 @@ class Player:
 
     @property
     def zones(self) -> list[Zone]:
-        return self._zones
+        return list(self._zones.values())
 
     def play(self, pattern: Pattern) -> None:
         if self.current is None:
-            for zone in self._zones:
+            for zone in self._zones.values():
                 zone.array.take_control()
         self.current = pattern
         self._started_at = self._clock()
@@ -35,34 +35,16 @@ class Player:
     def elapsed(self) -> float:
         return self._clock() - self._started_at
 
-    def render_and_push(self, t: float | None = None) -> Frame:
+    def render(self, t: float | None = None) -> Frame:
         if self.current is None:
             return {}
-        frame = render_frame(
-            self.current, [z.layout for z in self._zones], self.elapsed() if t is None else t
-        )
-        for zone in self._zones:
-            self._push(zone, frame[zone.id])
-        self.last_frame = frame
-        return frame
+        layouts = [zone.layout for zone in self._zones.values()]
+        self.last_frame = render_frame(self.current, layouts, self.elapsed() if t is None else t)
+        return self.last_frame
 
-    def stop(self) -> None:
-        if self.current is None:
-            return
-        for zone in self._zones:
-            self._push(zone, [BLACK] * zone.array.lamp_count)
-            zone.array.release_control()
-        self.current = None
-        self.last_frame = {}
-        self._shown.clear()
-
-    def close(self) -> None:
-        self.stop()
-        for zone in self._zones:
-            zone.array.close()
-
-    def _push(self, zone: Zone, colors: list[Rgb]) -> None:
-        shown = self._shown.get(zone.id)
+    def push(self, zone_id: str, colors: list[Rgb]) -> None:
+        zone = self._zones[zone_id]
+        shown = self._shown.get(zone_id)
         if shown == colors:
             return
         if all(c == colors[0] for c in colors):
@@ -74,4 +56,25 @@ class Player:
                 if shown is None or shown[lamp_id] != color
             }
             zone.array.set_lamps(changed)
-        self._shown[zone.id] = colors
+        self._shown[zone_id] = colors
+
+    def render_and_push(self, t: float | None = None) -> Frame:
+        frame = self.render(t)
+        for zone_id, colors in frame.items():
+            self.push(zone_id, colors)
+        return frame
+
+    def stop(self) -> None:
+        if self.current is None:
+            return
+        for zone in self._zones.values():
+            self.push(zone.id, [BLACK] * zone.array.lamp_count)
+            zone.array.release_control()
+        self.current = None
+        self.last_frame = {}
+        self._shown.clear()
+
+    def close(self) -> None:
+        self.stop()
+        for zone in self._zones.values():
+            zone.array.close()

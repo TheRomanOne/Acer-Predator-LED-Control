@@ -1,8 +1,13 @@
 """In-memory emulation of a HID LampArray device, for tests above the transport layer."""
 
+from __future__ import annotations
+
 import struct
 from dataclasses import dataclass, field
 
+from led_studio.devices.lamparray import LampArray
+from led_studio.devices.layout import layout_from_array
+from led_studio.devices.zone import Zone
 from led_studio.hid.descriptor import LampArrayReportIds
 from led_studio.hid.reports import LampArrayAttributes, LampAttributes
 from tests.test_descriptor import LAMPARRAY_DESCRIPTOR
@@ -44,6 +49,26 @@ def make_array(lamp_count: int, kind: int = 1) -> LampArrayAttributes:
         kind=kind,
         min_update_interval_us=33000,
     )
+
+
+def make_fake_zone(
+    zone_id: str = "z", name: str = "Fake", lamp_count: int = 3, kind: int = 7
+) -> tuple[Zone, FakeLampArrayTransport]:
+    """An opened Zone backed by an in-memory device, with the open handshake already cleared."""
+    transport = FakeLampArrayTransport(
+        array=make_array(lamp_count, kind=kind),
+        lamps=[make_lamp(i, x_um=i * 1000, purposes=1) for i in range(lamp_count)],
+    )
+    array = LampArray.open(transport)
+    transport.sent.clear()
+    transport.get_requests.clear()
+    zone = Zone(
+        id=zone_id,
+        name=name,
+        array=array,
+        layout=layout_from_array(zone_id, array.attributes, array.lamps),
+    )
+    return zone, transport
 
 
 @dataclass

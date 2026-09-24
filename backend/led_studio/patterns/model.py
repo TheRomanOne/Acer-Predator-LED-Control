@@ -103,8 +103,13 @@ class Layer(_Strict):
     enabled: bool = True
 
 
-class Pattern(_Strict):
-    id: str
-    name: str
+class PatternBody(_Strict):
+    """Everything the user authors; the id is assigned by storage."""
+
+    name: Annotated[str, Field(min_length=1, max_length=100)]
     layers: list[Layer] = Field(default_factory=list)
     brightness: UnitFloat = 1.0
+
+
+class Pattern(PatternBody):
+    id: str
