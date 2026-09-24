@@ -35,9 +35,7 @@ export function ZoneView({ device, colors, selected, onLampClick }: Props) {
 
   return (
     <figure className="zone">
-      <figcaption>
-        {device.name} <span className="muted">· {device.lamp_count} lamps</span>
-      </figcaption>
+      <figcaption>{device.name}</figcaption>
       <svg
         viewBox={`${-pad} ${-pad} ${VIEW_WIDTH + 2 * pad} ${height + 2 * pad}`}
         role="img"

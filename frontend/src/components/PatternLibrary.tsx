@@ -20,7 +20,6 @@ export function PatternLibrary({ patterns, activeId, editingId, onNew, onOpen, o
           + New
         </button>
       </header>
-      {patterns.length === 0 && <p className="hint">Nothing saved yet.</p>}
       <ul>
         {patterns.map((pattern) => (
           <li key={pattern.id} className={pattern.id === editingId ? 'selected' : undefined}>

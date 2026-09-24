@@ -124,6 +124,22 @@ def test_active_pattern_is_restored_on_startup(store: PatternStore) -> None:
         assert transport.sent[0] == b"\x70\x00"
 
 
+def test_status_reports_playback_and_per_zone_health(client: TestClient) -> None:
+    client.post("/api/playback/preview", json=SOLID_RED)
+    with client.websocket_connect("/api/ws/frames") as ws:
+        ws.receive_json()
+        ws.receive_json()  # two frames: enough to measure a rate
+
+    status = client.get("/api/status").json()
+
+    assert status["playback"] == {"pattern_id": None, "preview": True}
+    assert status["fps"] > 0
+    zones = {z["id"]: z for z in status["zones"]}
+    assert zones["05af:667a:0"]["frames"] >= 1
+    assert zones["05af:667a:0"]["errors"] == 0
+    assert zones["05af:667a:0"]["last_error"] is None
+
+
 def test_frames_are_streamed_over_websocket(client: TestClient) -> None:
     client.post("/api/playback/preview", json=SOLID_RED)
 

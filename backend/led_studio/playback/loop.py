@@ -3,6 +3,7 @@
 import asyncio
 import logging
 import time
+from collections import deque
 from collections.abc import Callable
 
 from led_studio.hid.reports import Rgb
@@ -11,6 +12,7 @@ from led_studio.playback.player import Frame, Player
 log = logging.getLogger(__name__)
 
 _IDLE_POLL_S = 0.05
+_FPS_WINDOW = 30  # frames averaged for the reported rate
 # The vendor lighting service can silently switch a zone back to its own effect; retaking
 # control this often keeps the outage short and costs one full repaint per interval.
 DEFAULT_REASSERT_CONTROL_S = 1.0
@@ -29,6 +31,17 @@ class PlaybackLoop:
         self._on_frame = on_frame
         self._reassert_interval = reassert_control_s
         self._last_reassert = time.monotonic()
+        self._frame_times: deque[float] = deque(maxlen=_FPS_WINDOW)
+
+    @property
+    def measured_fps(self) -> float:
+        """Achieved frame rate over the last few frames; 0 while idle."""
+        if len(self._frame_times) < 2:
+            return 0.0
+        if time.monotonic() - self._frame_times[-1] > 1.0:
+            return 0.0
+        span = self._frame_times[-1] - self._frame_times[0]
+        return (len(self._frame_times) - 1) / span if span > 0 else 0.0
 
     async def run(self) -> None:
         while True:
@@ -43,6 +56,7 @@ class PlaybackLoop:
             await asyncio.gather(
                 *(self._push(zone_id, colors) for zone_id, colors in frame.items())
             )
+            self._frame_times.append(time.monotonic())
             self._on_frame(frame)
             await asyncio.sleep(max(0.0, self._interval - (time.monotonic() - started)))
 

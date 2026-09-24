@@ -2,6 +2,7 @@
 
 import time
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 
 from led_studio.devices.zone import Zone
 from led_studio.hid.reports import Rgb
@@ -12,6 +13,15 @@ Frame = dict[str, list[Rgb]]
 BLACK = Rgb(0, 0, 0)
 
 
+@dataclass
+class ZoneHealth:
+    """Running tally of hardware pushes for one zone, for the status API."""
+
+    frames: int = 0
+    errors: int = 0
+    last_error: str | None = None
+
+
 class Player:
     def __init__(self, zones: Sequence[Zone], clock: Callable[[], float] = time.monotonic) -> None:
         self._zones = {zone.id: zone for zone in zones}
@@ -20,6 +30,7 @@ class Player:
         self._shown: dict[str, list[Rgb]] = {}  # what each zone currently displays
         self.current: Pattern | None = None
         self.last_frame: Frame = {}
+        self.health: dict[str, ZoneHealth] = {zone.id: ZoneHealth() for zone in zones}
 
     @property
     def zones(self) -> list[Zone]:
@@ -55,18 +66,28 @@ class Player:
 
     def push(self, zone_id: str, colors: list[Rgb]) -> None:
         zone = self._zones[zone_id]
+        health = self.health[zone_id]
         shown = self._shown.get(zone_id)
         if shown == colors:
+            health.frames += 1
             return
-        if all(c == colors[0] for c in colors):
-            zone.array.fill(colors[0])
-        else:
-            changed = {
-                lamp_id: color
-                for lamp_id, color in enumerate(colors)
-                if shown is None or shown[lamp_id] != color
-            }
-            zone.array.set_lamps(changed)
+        try:
+            if all(c == colors[0] for c in colors):
+                zone.array.fill(colors[0])
+            else:
+                changed = {
+                    lamp_id: color
+                    for lamp_id, color in enumerate(colors)
+                    if shown is None or shown[lamp_id] != color
+                }
+                zone.array.set_lamps(changed)
+        except OSError as exc:
+            health.errors += 1
+            health.last_error = str(exc)
+            self._shown.pop(zone_id, None)  # unknown state: repaint fully next time
+            raise
+        health.frames += 1
+        health.last_error = None
         self._shown[zone_id] = colors
 
     def render_and_push(self, t: float | None = None) -> Frame:

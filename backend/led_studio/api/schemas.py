@@ -49,6 +49,19 @@ class ApplyIn(BaseModel):
     pattern_id: str
 
 
+class ZoneHealthOut(BaseModel):
+    id: str
+    frames: int
+    errors: int
+    last_error: str | None
+
+
+class StatusOut(BaseModel):
+    playback: PlaybackOut
+    fps: float
+    zones: list[ZoneHealthOut]
+
+
 FrameOut = dict[str, list[tuple[int, int, int]]]
 
 

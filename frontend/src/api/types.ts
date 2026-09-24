@@ -76,5 +76,18 @@ export interface Playback {
   preview: boolean
 }
 
+export interface ZoneHealth {
+  id: string
+  frames: number
+  errors: number
+  last_error: string | null
+}
+
+export interface Status {
+  playback: Playback
+  fps: number
+  zones: ZoneHealth[]
+}
+
 /** Device id -> [r, g, b] per lamp, indexed by lamp id. */
 export type Frame = Record<string, Array<[number, number, number]>>

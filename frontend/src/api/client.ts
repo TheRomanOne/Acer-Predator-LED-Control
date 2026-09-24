@@ -1,4 +1,4 @@
-import type { Device, Frame, Pattern, PatternBody, Playback } from './types'
+import type { Device, Frame, Pattern, PatternBody, Playback, Status } from './types'
 
 export class ApiError extends Error {
   readonly status: number
@@ -45,6 +45,7 @@ export const api = {
     request<Pattern>(`/api/patterns/${id}`, json('PUT', body)),
   deletePattern: (id: string) => request<void>(`/api/patterns/${id}`, { method: 'DELETE' }),
   getPlayback: () => request<Playback>('/api/playback'),
+  getStatus: () => request<Status>('/api/status'),
   apply: (patternId: string) =>
     request<Playback>('/api/playback/apply', json('POST', { pattern_id: patternId })),
   preview: (body: PatternBody) => request<Playback>('/api/playback/preview', json('POST', body)),

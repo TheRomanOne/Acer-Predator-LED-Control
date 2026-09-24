@@ -7,7 +7,15 @@ from collections.abc import AsyncIterator, Iterator, Sequence
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect, status
 
-from led_studio.api.schemas import ApplyIn, DeviceOut, FrameOut, PlaybackOut, frame_out
+from led_studio.api.schemas import (
+    ApplyIn,
+    DeviceOut,
+    FrameOut,
+    PlaybackOut,
+    StatusOut,
+    ZoneHealthOut,
+    frame_out,
+)
 from led_studio.devices.zone import Zone
 from led_studio.patterns.model import Pattern, PatternBody
 from led_studio.playback.loop import PlaybackLoop
@@ -45,11 +53,12 @@ class FrameBroadcaster:
 def create_app(zones: Sequence[Zone], store: PatternStore, fps: int) -> FastAPI:
     player = Player(zones)
     broadcaster = FrameBroadcaster()
+    loop = PlaybackLoop(player, fps, broadcaster.publish)
 
     @contextlib.asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         _restore_active_pattern(player, store)
-        task = asyncio.create_task(PlaybackLoop(player, fps, broadcaster.publish).run())
+        task = asyncio.create_task(loop.run())
         try:
             yield
         finally:
@@ -94,6 +103,17 @@ def create_app(zones: Sequence[Zone], store: PatternStore, fps: int) -> FastAPI:
     @app.get("/api/playback")
     def get_playback() -> PlaybackOut:
         return _playback_out(player)
+
+    @app.get("/api/status")
+    def get_status() -> StatusOut:
+        return StatusOut(
+            playback=_playback_out(player),
+            fps=round(loop.measured_fps, 1),
+            zones=[
+                ZoneHealthOut(id=zone_id, **vars(health))
+                for zone_id, health in player.health.items()
+            ],
+        )
 
     @app.post("/api/playback/apply")
     def apply_pattern(body: ApplyIn) -> PlaybackOut:

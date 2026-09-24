@@ -137,13 +137,12 @@ export function EffectEditor({ effect, onChange }: Props) {
 
     case 'paint':
       return (
-        <p className="hint">
-          Pick a brush colour above, then click lamps in the zone view to paint them.{' '}
-          {Object.keys(effect.colors).length} lamp(s) painted.
+        <div className="row">
+          <span className="muted">{Object.keys(effect.colors).length} painted</span>
           <button type="button" onClick={() => set({ colors: {} })}>
             Clear
           </button>
-        </p>
+        </div>
       )
 
     case 'ripple':

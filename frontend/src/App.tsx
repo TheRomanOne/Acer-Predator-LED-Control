@@ -6,10 +6,18 @@ import { EffectEditor } from './components/EffectEditor'
 import { ColorField } from './components/fields'
 import { LayerList } from './components/LayerList'
 import { PatternLibrary } from './components/PatternLibrary'
+import { ZoneStatusBar } from './components/ZoneStatusBar'
 import { ZoneView } from './components/ZoneView'
 import { EFFECT_LABELS } from './editor/effects'
 import { editorReducer, initialEditorState } from './editor/reducer'
-import { useDebouncedEffect, useDevices, useFrames, usePatterns, usePlayback } from './hooks'
+import {
+  useDebouncedEffect,
+  useDevices,
+  useFrames,
+  usePatterns,
+  usePlayback,
+  useStatus,
+} from './hooks'
 
 const PREVIEW_DEBOUNCE_MS = 120
 
@@ -17,9 +25,11 @@ export default function App() {
   const devices = useDevices()
   const [patterns, refreshPatterns] = usePatterns()
   const [playback, setPlayback] = usePlayback()
+  const status = useStatus()
   const [editor, dispatch] = useReducer(editorReducer, undefined, initialEditorState)
   const [livePreview, setLivePreview] = useState(true)
   const [brush, setBrush] = useState<Color>({ r: 255, g: 255, b: 255 })
+  const [inspected, setInspected] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const playing = playback.pattern_id !== null || playback.preview
@@ -35,14 +45,15 @@ export default function App() {
     if (livePreview) run(api.preview(draft).then(setPlayback))
   })
 
-  const selectedLayer = editor.selectedLayer === null ? null : editor.draft.layers[editor.selectedLayer]
-  const paintTarget = selectedLayer?.effect.type === 'paint' ? selectedLayer : null
-  const paintedLamps = (deviceId: string) =>
-    new Set(
-      paintTarget?.devices?.[0] === deviceId
-        ? Object.keys(paintTarget.effect.type === 'paint' ? paintTarget.effect.colors : {}).map(Number)
-        : [],
-    )
+  const layerIndex = editor.selectedLayer
+  const selectedLayer = layerIndex === null ? null : editor.draft.layers[layerIndex]
+  const paintLayer = selectedLayer?.effect.type === 'paint' ? selectedLayer : null
+  const paintedLamps = new Set(
+    paintLayer?.effect.type === 'paint' ? Object.keys(paintLayer.effect.colors).map(Number) : [],
+  )
+  // The lamp map shows the paint target while painting, otherwise whatever zone was clicked.
+  const mapDeviceId = paintLayer ? (paintLayer.devices?.[0] ?? inspected ?? devices[0]?.id) : inspected
+  const mapDevice = devices.find((d) => d.id === mapDeviceId) ?? null
 
   const save = async () => {
     const saved = editor.patternId
@@ -52,8 +63,10 @@ export default function App() {
     await refreshPatterns()
     return saved
   }
-
   const apply = (pattern: Pattern) => run(api.apply(pattern.id).then(setPlayback))
+
+  const activeName = patterns.find((p) => p.id === playback.pattern_id)?.name
+  const playbackLabel = playback.preview ? 'Preview' : activeName ? `Playing ${activeName}` : 'Idle'
 
   return (
     <div className="app">
@@ -77,18 +90,27 @@ export default function App() {
           />
         </label>
         <label className="checkbox">
-          <input type="checkbox" checked={livePreview} onChange={(e) => setLivePreview(e.target.checked)} />
-          Live preview
+          <input
+            type="checkbox"
+            checked={livePreview}
+            onChange={(e) => setLivePreview(e.target.checked)}
+          />
+          Live
         </label>
         <span className="spacer" />
+        <span className={`playback ${status ? (playing ? 'on' : '') : 'bad'}`}>
+          <span className="dot" />
+          {status ? playbackLabel : 'Backend offline'}
+          {status && playing && <span className="mono muted"> {status.fps} fps</span>}
+        </span>
         <button type="button" onClick={() => run(save())}>
           Save
         </button>
         <button type="button" className="primary" onClick={() => run(save().then(apply))}>
-          Save &amp; apply
+          Apply
         </button>
         <button type="button" onClick={() => run(api.stop().then(setPlayback))}>
-          Stop (firmware)
+          Stop
         </button>
       </header>
 
@@ -108,56 +130,63 @@ export default function App() {
           onApply={apply}
           onDelete={(pattern) => {
             if (!confirm(`Delete "${pattern.name}"?`)) return
-            run(api.deletePattern(pattern.id).then(refreshPatterns).then(api.getPlayback).then(setPlayback))
+            run(
+              api
+                .deletePattern(pattern.id)
+                .then(refreshPatterns)
+                .then(api.getPlayback)
+                .then(setPlayback),
+            )
             if (editor.patternId === pattern.id) dispatch({ type: 'new' })
           }}
         />
 
-        <main className="zones">
-          {devices.length === 0 && <p className="hint">No LampArray devices found.</p>}
-          {devices.map((device) => (
-            <ZoneView
-              key={device.id}
-              device={device}
-              colors={frame?.[device.id] ?? null}
-              selected={paintedLamps(device.id)}
-              onLampClick={(lampId) =>
-                dispatch({ type: 'paintLamps', deviceId: device.id, lampIds: [lampId], color: brush })
-              }
-            />
-          ))}
-          {paintTarget && (
-            <p className="hint">
-              Painting{' '}
-              <strong>
-                {devices.find((d) => d.id === paintTarget.devices?.[0])?.name ?? 'any zone'}
-              </strong>
-              : click lamps to colour them with the brush.
-            </p>
-          )}
-        </main>
-
-        <aside className="inspector">
+        <main className="editor">
           <LayerList
             layers={editor.draft.layers}
-            selected={editor.selectedLayer}
+            selected={layerIndex}
             devices={devices}
             dispatch={dispatch}
           />
-          {selectedLayer && editor.selectedLayer !== null && (
+          {selectedLayer && layerIndex !== null && (
             <section className="effect">
               <h2>{EFFECT_LABELS[selectedLayer.effect.type]}</h2>
-              {paintTarget && <ColorField label="Brush" value={brush} onChange={setBrush} />}
+              {paintLayer && <ColorField label="Brush" value={brush} onChange={setBrush} />}
               <EffectEditor
                 effect={selectedLayer.effect}
                 onChange={(effect) =>
-                  dispatch({ type: 'updateLayer', index: editor.selectedLayer!, layer: { effect } })
+                  dispatch({ type: 'updateLayer', index: layerIndex, layer: { effect } })
                 }
               />
             </section>
           )}
-        </aside>
+          {mapDevice && (
+            <section className="lamp-map">
+              <ZoneView
+                device={mapDevice}
+                colors={frame?.[mapDevice.id] ?? null}
+                selected={paintLayer?.devices?.[0] === mapDevice.id ? paintedLamps : new Set()}
+                onLampClick={(lampId) =>
+                  dispatch({
+                    type: 'paintLamps',
+                    deviceId: mapDevice.id,
+                    lampIds: [lampId],
+                    color: brush,
+                  })
+                }
+              />
+            </section>
+          )}
+        </main>
       </div>
+
+      <ZoneStatusBar
+        devices={devices}
+        frame={frame}
+        health={Object.fromEntries((status?.zones ?? []).map((z) => [z.id, z]))}
+        inspected={inspected}
+        onInspect={setInspected}
+      />
     </div>
   )
 }

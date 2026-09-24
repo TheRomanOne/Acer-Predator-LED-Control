@@ -80,3 +80,6 @@ async def test_a_failing_zone_does_not_kill_the_loop() -> None:
         await task
 
     assert len([r for r in good_transport.sent if r[0] == 0x50]) > 1
+    assert player.health["good"].frames > 1 and player.health["good"].last_error is None
+    assert player.health["bad"].errors >= 1
+    assert "device unplugged" in (player.health["bad"].last_error or "")

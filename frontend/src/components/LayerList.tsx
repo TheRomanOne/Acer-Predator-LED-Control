@@ -29,7 +29,6 @@ export function LayerList({ layers, selected, devices, dispatch }: Props) {
           ))}
         </select>
       </header>
-      {layers.length === 0 && <p className="hint">No layers yet. Add one to start painting light.</p>}
       <ol>
         {/* Rendered top-most first, like a paint program: the last layer wins. */}
         {[...layers.keys()].reverse().map((index) => {

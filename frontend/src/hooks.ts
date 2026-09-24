@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { api, openFrames } from './api/client'
-import type { Device, Frame, Pattern, Playback } from './api/types'
+import type { Device, Frame, Pattern, Playback, Status } from './api/types'
 
 export function useDevices(): Device[] {
   const [devices, setDevices] = useState<Device[]>([])
@@ -26,6 +26,32 @@ export function usePlayback(): [Playback, (next: Playback) => void] {
     api.getPlayback().then(setPlayback).catch(console.error)
   }, [])
   return [playback, setPlayback]
+}
+
+const STATUS_POLL_MS = 2000
+
+/** Backend status (playback, achieved fps, per-zone health), polled; null until first reply. */
+export function useStatus(): Status | null {
+  const [status, setStatus] = useState<Status | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    const poll = () =>
+      api
+        .getStatus()
+        .then((s) => {
+          if (!cancelled) setStatus(s)
+        })
+        .catch(() => {
+          if (!cancelled) setStatus(null)
+        })
+    poll()
+    const handle = setInterval(poll, STATUS_POLL_MS)
+    return () => {
+      cancelled = true
+      clearInterval(handle)
+    }
+  }, [])
+  return status
 }
 
 /** Latest rendered frame from the backend, or null while nothing is playing. */
