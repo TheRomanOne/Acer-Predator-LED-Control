@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { api, ApiError } from './client'
+import { api, ApiError, openFrames } from './client'
 
 function mockFetch(status: number, body: unknown) {
   const fetchMock = vi.fn().mockResolvedValue(
@@ -10,7 +10,61 @@ function mockFetch(status: number, body: unknown) {
   return fetchMock
 }
 
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => {
+  vi.unstubAllGlobals()
+  vi.useRealTimers()
+})
+
+class FakeSocket {
+  static instances: FakeSocket[] = []
+  onmessage: ((e: { data: string }) => void) | null = null
+  onclose: (() => void) | null = null
+  onopen: (() => void) | null = null
+  closed = false
+  url: string
+  constructor(url: string) {
+    this.url = url
+    FakeSocket.instances.push(this)
+  }
+  close() {
+    this.closed = true
+  }
+}
+
+describe('openFrames', () => {
+  it('reconnects with growing delays and resets after a successful connection', () => {
+    vi.useFakeTimers()
+    FakeSocket.instances = []
+    vi.stubGlobal('WebSocket', FakeSocket)
+    vi.stubGlobal('location', { protocol: 'http:', host: 'localhost:5173' })
+
+    const close = openFrames(() => {})
+    expect(FakeSocket.instances).toHaveLength(1)
+
+    FakeSocket.instances[0].onclose?.()
+    vi.advanceTimersByTime(999)
+    expect(FakeSocket.instances).toHaveLength(1)
+    vi.advanceTimersByTime(1)
+    expect(FakeSocket.instances).toHaveLength(2)
+
+    FakeSocket.instances[1].onclose?.()
+    vi.advanceTimersByTime(1999)
+    expect(FakeSocket.instances).toHaveLength(2)
+    vi.advanceTimersByTime(1)
+    expect(FakeSocket.instances).toHaveLength(3)
+
+    FakeSocket.instances[2].onopen?.()
+    FakeSocket.instances[2].onclose?.()
+    vi.advanceTimersByTime(1000)
+    expect(FakeSocket.instances).toHaveLength(4)
+
+    close()
+    FakeSocket.instances[3].onclose?.()
+    vi.advanceTimersByTime(10000)
+    expect(FakeSocket.instances).toHaveLength(4)
+    expect(FakeSocket.instances[3].closed).toBe(true)
+  })
+})
 
 describe('api', () => {
   it('posts a preview body as JSON', async () => {

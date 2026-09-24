@@ -52,20 +52,27 @@ export const api = {
   stop: () => request<Playback>('/api/playback/stop', { method: 'POST' }),
 }
 
-const RECONNECT_DELAY_MS = 1000
+const RECONNECT_MIN_MS = 1000
+const RECONNECT_MAX_MS = 10000
 
-/** Subscribe to rendered frames; reconnects until the returned function is called. */
+/** Subscribe to rendered frames; reconnects (with backoff) until the returned function is called. */
 export function openFrames(onFrame: (frame: Frame) => void): () => void {
   let socket: WebSocket | null = null
   let closed = false
   let retry: ReturnType<typeof setTimeout> | undefined
+  let delay = RECONNECT_MIN_MS
 
   const connect = () => {
     const protocol = location.protocol === 'https:' ? 'wss' : 'ws'
     socket = new WebSocket(`${protocol}://${location.host}/api/ws/frames`)
+    socket.onopen = () => {
+      delay = RECONNECT_MIN_MS
+    }
     socket.onmessage = (event) => onFrame(JSON.parse(event.data) as Frame)
     socket.onclose = () => {
-      if (!closed) retry = setTimeout(connect, RECONNECT_DELAY_MS)
+      if (closed) return
+      retry = setTimeout(connect, delay)
+      delay = Math.min(delay * 2, RECONNECT_MAX_MS)
     }
   }
   connect()
