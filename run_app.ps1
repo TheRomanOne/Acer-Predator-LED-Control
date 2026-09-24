@@ -17,6 +17,18 @@ foreach ($tool in "python", "npm") {
     }
 }
 
+# A previous run that did not shut down cleanly leaves a process holding a port; evict it.
+function Free-Port([int]$port) {
+    Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue |
+        Select-Object -ExpandProperty OwningProcess -Unique |
+        ForEach-Object {
+            Write-Host "Port $port is held by process $_ - stopping it."
+            Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue
+        }
+}
+Free-Port 8765
+Free-Port 5173
+
 if (-not (Test-Path $python)) {
     Write-Host "Creating Python environment..."
     python -m venv (Join-Path $backend ".venv")

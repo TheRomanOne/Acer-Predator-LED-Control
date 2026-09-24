@@ -12,6 +12,18 @@ for tool in python3 npm; do
     command -v "$tool" >/dev/null || { echo "'$tool' is not installed. Install Python 3.13+ and Node.js 24+ first." >&2; exit 1; }
 done
 
+# A previous run that did not shut down cleanly leaves a process holding a port; evict it.
+free_port() {
+    local pids
+    pids="$(lsof -t -iTCP:"$1" -sTCP:LISTEN 2>/dev/null || fuser -n tcp "$1" 2>/dev/null || true)"
+    if [ -n "$pids" ]; then
+        echo "Port $1 is held by process(es) $pids - stopping them."
+        kill -9 $pids 2>/dev/null || true
+    fi
+}
+free_port 8765
+free_port 5173
+
 if [ ! -x "$python" ]; then
     echo "Creating Python environment..."
     python3 -m venv "$backend/.venv"
