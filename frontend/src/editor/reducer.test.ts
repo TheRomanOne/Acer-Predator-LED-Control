@@ -97,3 +97,41 @@ describe('editorReducer', () => {
     expect(state.draft).toEqual({ name: 'Sunset', layers: [], brightness: 0.4 })
   })
 })
+
+describe('editorReducer preview zone', () => {
+  it('starts without a zone and switches to the selected one', () => {
+    expect(initialEditorState().zone).toBeNull()
+
+    const next = editorReducer(initialEditorState(), { type: 'selectZone', deviceId: 'ring' })
+
+    expect(next.zone).toBe('ring')
+  })
+
+  it('follows the painted device and a bound paint layer when it is selected', () => {
+    const painted = editorReducer(withLayers('solid', 'paint'), {
+      type: 'paintLamps',
+      deviceId: 'kb',
+      lampIds: [1],
+      color: BLUE,
+    })
+    expect(painted.zone).toBe('kb')
+
+    const elsewhere = editorReducer(painted, { type: 'selectZone', deviceId: 'ring' })
+    const solidSelected = editorReducer(elsewhere, { type: 'selectLayer', index: 0 })
+    expect(solidSelected.zone).toBe('ring')
+
+    expect(editorReducer(solidSelected, { type: 'selectLayer', index: 1 }).zone).toBe('kb')
+  })
+
+  it('keeps the zone across new and loaded patterns', () => {
+    const state = editorReducer(initialEditorState(), { type: 'selectZone', deviceId: 'ring' })
+
+    expect(editorReducer(state, { type: 'new' }).zone).toBe('ring')
+    expect(
+      editorReducer(state, {
+        type: 'load',
+        pattern: { id: 'abc', name: 'Sunset', layers: [], brightness: 0.4 },
+      }).zone,
+    ).toBe('ring')
+  })
+})

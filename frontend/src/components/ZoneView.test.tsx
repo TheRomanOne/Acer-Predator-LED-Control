@@ -16,6 +16,7 @@ const KEYBOARD: Device = {
     { id: 1, x: 0.5, y: 0.2, key: 0 },
   ],
 }
+const RING: Device = { ...KEYBOARD, id: 'ring', name: 'InfiniteRing', kind: 'chassis' }
 
 describe('ZoneView', () => {
   it('draws one lamp per device lamp, coloured from the frame, with key labels', () => {
@@ -38,13 +39,38 @@ describe('ZoneView', () => {
     expect(screen.getByText('Esc')).toBeInTheDocument()
   })
 
+  it('draws keyboards as keycaps and other zones as round lamps', () => {
+    const { container, rerender } = render(
+      <ZoneView device={KEYBOARD} colors={null} selected={new Set()} onLampClick={() => {}} />,
+    )
+    expect(container.querySelectorAll('rect')).toHaveLength(2)
+    expect(container.querySelectorAll('circle')).toHaveLength(0)
+
+    rerender(<ZoneView device={RING} colors={null} selected={new Set()} onLampClick={() => {}} />)
+    expect(container.querySelectorAll('circle')).toHaveLength(2)
+    expect(container.querySelectorAll('rect')).toHaveLength(0)
+  })
+
   it('falls back to off when no frame is available and reports clicks', () => {
     const onLampClick = vi.fn()
     render(<ZoneView device={KEYBOARD} colors={null} selected={new Set()} onLampClick={onLampClick} />)
 
     fireEvent.click(screen.getAllByRole('button')[1])
 
-    expect(onLampClick).toHaveBeenCalledWith(1, expect.anything())
+    expect(onLampClick).toHaveBeenCalledWith(1)
+  })
+
+  it('activates a focused lamp from the keyboard', () => {
+    const onLampClick = vi.fn()
+    render(<ZoneView device={KEYBOARD} colors={null} selected={new Set()} onLampClick={onLampClick} />)
+
+    const [esc] = screen.getAllByRole('button')
+    fireEvent.keyDown(esc, { key: 'Enter' })
+    fireEvent.keyDown(esc, { key: ' ' })
+    fireEvent.keyDown(esc, { key: 'a' })
+
+    expect(onLampClick).toHaveBeenCalledTimes(2)
+    expect(onLampClick).toHaveBeenCalledWith(0)
   })
 
   it('marks selected lamps', () => {

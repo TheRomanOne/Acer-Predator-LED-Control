@@ -6,6 +6,8 @@ export interface EditorState {
   /** id of the saved pattern this draft came from; null for a new pattern. */
   patternId: string | null
   selectedLayer: number | null
+  /** Device shown in the preview map; null until the user picks one (the app shows the first). */
+  zone: string | null
 }
 
 export type EditorAction =
@@ -15,6 +17,7 @@ export type EditorAction =
   | { type: 'setName'; name: string }
   | { type: 'setBrightness'; brightness: number }
   | { type: 'selectLayer'; index: number | null }
+  | { type: 'selectZone'; deviceId: string }
   | { type: 'addLayer'; effectType: EffectType }
   | { type: 'updateLayer'; index: number; layer: Partial<Layer> }
   | { type: 'removeLayer'; index: number }
@@ -26,6 +29,7 @@ export function initialEditorState(): EditorState {
     draft: { name: 'Untitled', layers: [], brightness: 1 },
     patternId: null,
     selectedLayer: null,
+    zone: null,
   }
 }
 
@@ -39,13 +43,23 @@ function replaceLayer(state: EditorState, index: number, layer: Layer): EditorSt
   })
 }
 
+/** Select a layer; a paint layer bound to a device brings that device into the preview. */
+function selectLayer(state: EditorState, index: number | null): EditorState {
+  const layer = index === null ? undefined : state.draft.layers[index]
+  const paintedDevice = layer?.effect.type === 'paint' ? layer.devices?.[0] : undefined
+  return { ...state, selectedLayer: index, zone: paintedDevice ?? state.zone }
+}
+
 export function editorReducer(state: EditorState, action: EditorAction): EditorState {
   switch (action.type) {
     case 'new':
-      return initialEditorState()
+      return { ...initialEditorState(), zone: state.zone }
     case 'load': {
       const { id, ...draft } = action.pattern
-      return { draft, patternId: id, selectedLayer: draft.layers.length ? 0 : null }
+      return selectLayer(
+        { draft, patternId: id, selectedLayer: null, zone: state.zone },
+        draft.layers.length ? 0 : null,
+      )
     }
     case 'saved':
       return { ...state, patternId: action.pattern.id }
@@ -54,7 +68,9 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
     case 'setBrightness':
       return withDraft(state, { brightness: action.brightness })
     case 'selectLayer':
-      return { ...state, selectedLayer: action.index }
+      return selectLayer(state, action.index)
+    case 'selectZone':
+      return { ...state, zone: action.deviceId }
     case 'addLayer': {
       const layer: Layer = {
         effect: defaultEffect(action.effectType),
@@ -91,11 +107,12 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
       const sameDevice = layer.devices?.[0] === action.deviceId
       const colors = { ...(sameDevice ? layer.effect.colors : {}) }
       for (const lampId of action.lampIds) colors[lampId] = action.color
-      return replaceLayer(state, index, {
+      const painted = replaceLayer(state, index, {
         ...layer,
         devices: [action.deviceId],
         effect: { type: 'paint', colors },
       })
+      return { ...painted, zone: action.deviceId }
     }
   }
 }

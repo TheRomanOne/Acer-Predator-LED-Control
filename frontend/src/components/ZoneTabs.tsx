@@ -1,21 +1,21 @@
 import type { Device, Frame, ZoneHealth } from '../api/types'
 import { rgbCss } from '../color'
 
-const OFF = 'rgb(28, 28, 34)'
+const OFF = 'rgb(30, 33, 42)'
 
 interface Props {
   devices: Device[]
   frame: Frame | null
   health: Record<string, ZoneHealth>
-  /** Zone whose lamp map is open in the editor, if any. */
-  inspected: string | null
-  onInspect: (deviceId: string | null) => void
+  /** Zone whose lamp map is open in the preview. */
+  selected: string | null
+  onSelect: (deviceId: string) => void
 }
 
-/** Compact per-zone observability: live colour strip, frame counter and error state. */
-export function ZoneStatusBar({ devices, frame, health, inspected, onInspect }: Props) {
+/** One tab per zone: live colour strip, frame counter and error state; picks the previewed zone. */
+export function ZoneTabs({ devices, frame, health, selected, onSelect }: Props) {
   return (
-    <footer className="status-bar">
+    <div className="zone-tabs" role="tablist" aria-label="Zones">
       {devices.map((device) => {
         const colors = frame?.[device.id]
         const zone = health[device.id]
@@ -25,12 +25,18 @@ export function ZoneStatusBar({ devices, frame, health, inspected, onInspect }: 
           <button
             key={device.id}
             type="button"
-            className="zone-status"
-            aria-pressed={inspected === device.id}
-            onClick={() => onInspect(inspected === device.id ? null : device.id)}
+            role="tab"
+            className="zone-tab"
+            aria-selected={selected === device.id}
+            onClick={() => onSelect(device.id)}
           >
-            <span className={`dot ${failing ? 'bad' : 'ok'}`} title={title} />
-            <span className="zone-name">{device.name}</span>
+            <span className="zone-tab-head">
+              <span className={`dot ${failing ? 'bad' : 'ok'}`} title={title} />
+              <span className="zone-tab-name">{device.name}</span>
+              <span className="zone-tab-frames mono" title="Frames pushed">
+                {zone?.frames ?? 0}
+              </span>
+            </span>
             <svg
               className="strip"
               viewBox={`0 0 ${device.lamp_count} 1`}
@@ -48,11 +54,10 @@ export function ZoneStatusBar({ devices, frame, health, inspected, onInspect }: 
                 />
               ))}
             </svg>
-            <span className="muted mono">{zone?.frames ?? 0}</span>
-            {failing && <span className="error-text">{zone.last_error}</span>}
+            {failing && <span className="zone-tab-error">{zone.last_error}</span>}
           </button>
         )
       })}
-    </footer>
+    </div>
   )
 }

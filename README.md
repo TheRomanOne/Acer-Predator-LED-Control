@@ -87,6 +87,10 @@ alpha-blended over the layers below it:
   across the keyboard.
 - `paint` — explicit per-lamp colours; click keys in the editor to paint them.
 
+The preview panel shows one zone at a time: pick it from the zone tabs, which also show each
+zone's live colours, frame counter and error state. A paint layer follows the zone it was
+painted on, and painting a different zone moves the layer there.
+
 The backend renders frames at 30 fps, sends only the lamps that changed, and streams the same
 frames to the browser for the live preview.
 
