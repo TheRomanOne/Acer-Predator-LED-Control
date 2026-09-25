@@ -9,8 +9,6 @@ from typing import Protocol
 
 import hid
 
-from led_studio.hid.descriptor import LIGHTING_USAGE_PAGE
-
 
 class HidError(OSError):
     """A HID operation failed at the OS or device level."""
@@ -33,6 +31,7 @@ class HidDeviceInfo:
     product_id: int
     interface_number: int
     product: str
+    usage_page: int
 
     @property
     def id(self) -> str:
@@ -40,7 +39,8 @@ class HidDeviceInfo:
         return f"{self.vendor_id:04x}:{self.product_id:04x}:{self.interface_number}"
 
 
-def enumerate_lamparray_devices() -> list[HidDeviceInfo]:
+def enumerate_hid_devices() -> list[HidDeviceInfo]:
+    """Every HID top-level collection on the machine; callers pick by usage page."""
     return [
         HidDeviceInfo(
             path=info["path"],
@@ -48,9 +48,9 @@ def enumerate_lamparray_devices() -> list[HidDeviceInfo]:
             product_id=info["product_id"],
             interface_number=info["interface_number"],
             product=info["product_string"] or "",
+            usage_page=info["usage_page"],
         )
         for info in hid.enumerate()
-        if info["usage_page"] == LIGHTING_USAGE_PAGE
     ]
 
 

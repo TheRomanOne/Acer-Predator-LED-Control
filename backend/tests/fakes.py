@@ -129,3 +129,23 @@ class FakeLampArrayTransport:
 
     def close(self) -> None:
         self.closed = True
+
+
+@dataclass
+class FakeVendorTransport:
+    """Records feature reports sent to a vendor-specific interface (no readable reports)."""
+
+    sent: list[bytes] = field(default_factory=list)
+    closed: bool = False
+
+    def report_descriptor(self) -> bytes:
+        return b""
+
+    def get_feature_report(self, report_id: int, length: int) -> bytes:
+        raise OSError("fake vendor interface: nothing to read")
+
+    def send_feature_report(self, report: bytes) -> None:
+        self.sent.append(report)
+
+    def close(self) -> None:
+        self.closed = True
