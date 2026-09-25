@@ -35,7 +35,7 @@ export function SliderField({ label, value, onChange, min, max, step = 0.01 }: S
   return (
     <label className="field">
       <span>
-        {label} <em>{value.toFixed(2)}</em>
+        {label} <em className="mono">{value.toFixed(2)}</em>
       </span>
       <input
         type="range"
@@ -56,14 +56,14 @@ interface ColorFieldProps {
 }
 
 export function ColorField({ label, value, onChange }: ColorFieldProps) {
+  const hex = colorToHex(value)
   return (
-    <label className="field">
+    <label className="field color-field">
       <span>{label}</span>
-      <input
-        type="color"
-        value={colorToHex(value)}
-        onChange={(e) => onChange(hexToColor(e.target.value))}
-      />
+      <span className="swatch">
+        <input type="color" value={hex} onChange={(e) => onChange(hexToColor(e.target.value))} />
+        <code>{hex}</code>
+      </span>
     </label>
   )
 }

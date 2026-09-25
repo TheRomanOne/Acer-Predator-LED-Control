@@ -1,4 +1,5 @@
 import type { Pattern } from '../api/types'
+import { PlayIcon, PlusIcon, TrashIcon } from './icons'
 
 interface Props {
   patterns: Pattern[]
@@ -13,33 +14,47 @@ interface Props {
 export function PatternLibrary({ patterns, activeId, editingId, onNew, onOpen, onApply, onDelete }: Props) {
   return (
     <section className="library">
-      <header className="row">
+      <header className="panel-header">
         <h2>Patterns</h2>
-        <span className="spacer" />
-        <button type="button" onClick={onNew}>
-          + New
+        <button type="button" className="small" onClick={onNew}>
+          <PlusIcon /> New
         </button>
       </header>
-      <ul>
-        {patterns.map((pattern) => (
-          <li key={pattern.id} className={pattern.id === editingId ? 'selected' : undefined}>
-            <button type="button" className="name" onClick={() => onOpen(pattern)}>
-              {pattern.name}
-              {pattern.id === activeId && <span className="badge">on</span>}
-            </button>
-            <button type="button" onClick={() => onApply(pattern)} aria-label={`Apply ${pattern.name}`}>
-              ▶
-            </button>
-            <button
-              type="button"
-              onClick={() => onDelete(pattern)}
-              aria-label={`Delete ${pattern.name}`}
-            >
-              🗑
-            </button>
-          </li>
-        ))}
-      </ul>
+      {patterns.length === 0 ? (
+        <p className="empty">Nothing saved yet. Design a pattern and press Save.</p>
+      ) : (
+        <ul className="pattern-list">
+          {patterns.map((pattern) => {
+            const active = pattern.id === activeId
+            return (
+              <li key={pattern.id} className={`pattern-row${pattern.id === editingId ? ' selected' : ''}`}>
+                <button type="button" className="pattern-open" onClick={() => onOpen(pattern)}>
+                  <span className={`dot ${active ? 'ok' : ''}`} title={active ? 'Playing' : undefined} />
+                  <span className="pattern-title">{pattern.name}</span>
+                </button>
+                <span className="row-actions">
+                  <button
+                    type="button"
+                    className="icon"
+                    onClick={() => onApply(pattern)}
+                    aria-label={`Apply ${pattern.name}`}
+                  >
+                    <PlayIcon />
+                  </button>
+                  <button
+                    type="button"
+                    className="icon danger"
+                    onClick={() => onDelete(pattern)}
+                    aria-label={`Delete ${pattern.name}`}
+                  >
+                    <TrashIcon />
+                  </button>
+                </span>
+              </li>
+            )
+          })}
+        </ul>
+      )}
     </section>
   )
 }

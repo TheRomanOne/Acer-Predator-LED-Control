@@ -2,7 +2,7 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
 
 import type { Device, ZoneHealth } from '../api/types'
-import { ZoneStatusBar } from './ZoneStatusBar'
+import { ZoneTabs } from './ZoneTabs'
 
 const RING: Device = {
   id: 'ring',
@@ -21,15 +21,15 @@ const KB: Device = { ...RING, id: 'kb', name: 'Keyboard', kind: 'keyboard' }
 const healthy: ZoneHealth = { id: 'ring', frames: 120, errors: 0, last_error: null }
 const failing: ZoneHealth = { id: 'kb', frames: 3, errors: 7, last_error: 'device unplugged' }
 
-describe('ZoneStatusBar', () => {
+describe('ZoneTabs', () => {
   it('shows a live colour strip and frame count per zone', () => {
     render(
-      <ZoneStatusBar
+      <ZoneTabs
         devices={[RING]}
         frame={{ ring: [[255, 0, 0], [0, 0, 255]] }}
         health={{ ring: healthy }}
-        inspected={null}
-        onInspect={() => {}}
+        selected="ring"
+        onSelect={() => {}}
       />,
     )
 
@@ -42,28 +42,21 @@ describe('ZoneStatusBar', () => {
 
   it('surfaces the last error of a failing zone', () => {
     render(
-      <ZoneStatusBar
-        devices={[KB]}
-        frame={null}
-        health={{ kb: failing }}
-        inspected={null}
-        onInspect={() => {}}
-      />,
+      <ZoneTabs devices={[KB]} frame={null} health={{ kb: failing }} selected="kb" onSelect={() => {}} />,
     )
 
     expect(screen.getByTitle('7 errors · device unplugged')).toBeInTheDocument()
     expect(screen.getByText('device unplugged')).toBeInTheDocument()
   })
 
-  it('toggles inspection when a zone is clicked', () => {
-    const onInspect = vi.fn()
-    render(
-      <ZoneStatusBar devices={[RING]} frame={null} health={{}} inspected="ring" onInspect={onInspect} />,
-    )
+  it('selects the clicked zone and marks the selected tab', () => {
+    const onSelect = vi.fn()
+    render(<ZoneTabs devices={[RING, KB]} frame={null} health={{}} selected="ring" onSelect={onSelect} />)
 
-    fireEvent.click(screen.getByRole('button', { name: /InfiniteRing/ }))
+    fireEvent.click(screen.getByRole('tab', { name: /Keyboard/ }))
 
-    expect(onInspect).toHaveBeenCalledWith(null)
-    expect(screen.getByRole('button', { name: /InfiniteRing/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(onSelect).toHaveBeenCalledWith('kb')
+    expect(screen.getByRole('tab', { name: /InfiniteRing/ })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tab', { name: /Keyboard/ })).toHaveAttribute('aria-selected', 'false')
   })
 })

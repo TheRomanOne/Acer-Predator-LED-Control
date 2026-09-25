@@ -1,5 +1,6 @@
 import type { Color, Effect } from '../api/types'
 import { ColorField, NumberField, SliderField } from './fields'
+import { CloseIcon, PlusIcon } from './icons'
 
 interface Props {
   effect: Effect
@@ -7,6 +8,22 @@ interface Props {
 }
 
 const ANGLE = { label: 'Angle (°)', min: 0, max: 360, step: 5 }
+
+function RemoveButton({ label, disabled, onClick }: { label: string; disabled: boolean; onClick: () => void }) {
+  return (
+    <button type="button" className="icon" disabled={disabled} onClick={onClick} aria-label={label}>
+      <CloseIcon />
+    </button>
+  )
+}
+
+function AddButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button type="button" className="small ghost" onClick={onClick}>
+      <PlusIcon /> {label}
+    </button>
+  )
+}
 
 function ColorList({
   colors,
@@ -18,27 +35,22 @@ function ColorList({
   min?: number
 }) {
   return (
-    <div className="list">
+    <div className="list span">
       {colors.map((color, i) => (
-        <div key={i} className="row">
+        <div key={i} className="list-row">
           <ColorField
             label={`Colour ${i + 1}`}
             value={color}
             onChange={(c) => onChange(colors.map((x, j) => (j === i ? c : x)))}
           />
-          <button
-            type="button"
+          <RemoveButton
+            label={`Remove colour ${i + 1}`}
             disabled={colors.length <= min}
             onClick={() => onChange(colors.filter((_, j) => j !== i))}
-            aria-label={`Remove colour ${i + 1}`}
-          >
-            ×
-          </button>
+          />
         </div>
       ))}
-      <button type="button" onClick={() => onChange([...colors, colors[colors.length - 1]])}>
-        + Colour
-      </button>
+      <AddButton label="Colour" onClick={() => onChange([...colors, colors[colors.length - 1]])} />
     </div>
   )
 }
@@ -53,9 +65,9 @@ export function EffectEditor({ effect, onChange }: Props) {
     case 'gradient':
       return (
         <>
-          <div className="list">
+          <div className="list span">
             {effect.stops.map((stop, i) => (
-              <div key={i} className="row">
+              <div key={i} className="list-row">
                 <ColorField
                   label={`Stop ${i + 1}`}
                   value={stop.color}
@@ -72,24 +84,19 @@ export function EffectEditor({ effect, onChange }: Props) {
                     set({ stops: effect.stops.map((s, j) => (j === i ? { ...s, position } : s)) })
                   }
                 />
-                <button
-                  type="button"
+                <RemoveButton
+                  label={`Remove stop ${i + 1}`}
                   disabled={effect.stops.length <= 2}
                   onClick={() => set({ stops: effect.stops.filter((_, j) => j !== i) })}
-                  aria-label={`Remove stop ${i + 1}`}
-                >
-                  ×
-                </button>
+                />
               </div>
             ))}
-            <button
-              type="button"
+            <AddButton
+              label="Stop"
               onClick={() =>
                 set({ stops: [...effect.stops, { position: 1, color: { r: 255, g: 255, b: 255 } }] })
               }
-            >
-              + Stop
-            </button>
+            />
           </div>
           <NumberField {...ANGLE} value={effect.angle_deg} onChange={(angle_deg) => set({ angle_deg })} />
         </>
@@ -136,22 +143,15 @@ export function EffectEditor({ effect, onChange }: Props) {
       )
 
     case 'paint':
-      return (
-        <div className="row">
-          <span className="muted">{Object.keys(effect.colors).length} painted</span>
-          <button type="button" onClick={() => set({ colors: {} })}>
-            Clear
-          </button>
-        </div>
-      )
+      return <p className="hint span">Pick a zone in the preview and click its lamps to paint them.</p>
 
     case 'ripple':
       return (
         <>
           <ColorField label="Colour" value={effect.color} onChange={(color) => set({ color })} />
+          <NumberField label="Period (s)" value={effect.period_s} min={0.1} onChange={(period_s) => set({ period_s })} />
           <SliderField label="Origin X" value={effect.origin_x} min={0} max={1} onChange={(origin_x) => set({ origin_x })} />
           <SliderField label="Origin Y" value={effect.origin_y} min={0} max={1} onChange={(origin_y) => set({ origin_y })} />
-          <NumberField label="Period (s)" value={effect.period_s} min={0.1} onChange={(period_s) => set({ period_s })} />
           <SliderField label="Ring width" value={effect.width} min={0.02} max={1} onChange={(width) => set({ width })} />
         </>
       )
@@ -159,9 +159,9 @@ export function EffectEditor({ effect, onChange }: Props) {
     case 'keyframes':
       return (
         <>
-          <div className="list">
+          <div className="list span">
             {effect.frames.map((frame, i) => (
-              <div key={i} className="row">
+              <div key={i} className="list-row">
                 <NumberField
                   label="Time (s)"
                   value={frame.time_s}
@@ -177,33 +177,28 @@ export function EffectEditor({ effect, onChange }: Props) {
                     set({ frames: effect.frames.map((f, j) => (j === i ? { ...f, color } : f)) })
                   }
                 />
-                <button
-                  type="button"
+                <RemoveButton
+                  label={`Remove frame ${i + 1}`}
                   disabled={effect.frames.length <= 1}
                   onClick={() => set({ frames: effect.frames.filter((_, j) => j !== i) })}
-                  aria-label={`Remove frame ${i + 1}`}
-                >
-                  ×
-                </button>
+                />
               </div>
             ))}
-            <button
-              type="button"
+            <AddButton
+              label="Frame"
               onClick={() => {
                 const last = effect.frames[effect.frames.length - 1]
                 set({ frames: [...effect.frames, { time_s: last.time_s + 1, color: last.color }] })
               }}
-            >
-              + Frame
-            </button>
+            />
           </div>
-          <label className="field checkbox">
+          <label className="checkbox span">
             <input
               type="checkbox"
               checked={effect.interpolate}
               onChange={(e) => set({ interpolate: e.target.checked })}
             />
-            <span>Fade between frames</span>
+            Fade between frames
           </label>
         </>
       )
