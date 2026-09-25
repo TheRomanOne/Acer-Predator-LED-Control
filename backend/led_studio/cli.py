@@ -25,7 +25,7 @@ def zones() -> Iterator[list[Zone]]:
         yield opened
     finally:
         for zone in opened:
-            zone.array.close()
+            zone.close()
 
 
 def describe(zone: Zone) -> str:
@@ -46,7 +46,7 @@ def cmd_identify(args: argparse.Namespace) -> None:
     with zones() as opened:
         for zone, color in zip(opened, IDENTIFY_COLORS, strict=False):
             print(f"{describe(zone)} -> {color}")
-            zone.array.take_control()
+            zone.take_control()
             zone.array.fill(color)
             time.sleep(args.seconds)
     print("Done. Run `release` to give control back to the firmware.")
@@ -57,14 +57,14 @@ def cmd_fill(args: argparse.Namespace) -> None:
         zone = next((z for z in opened if z.id == args.device), None)
         if zone is None:
             sys.exit(f"no LampArray zone with id {args.device!r}; see `list`")
-        zone.array.take_control()
+        zone.take_control()
         zone.array.fill(Rgb(args.red, args.green, args.blue))
 
 
 def cmd_release(_: argparse.Namespace) -> None:
     with zones() as opened:
         for zone in opened:
-            zone.array.release_control()
+            zone.release_control()
 
 
 def main(argv: list[str] | None = None) -> None:

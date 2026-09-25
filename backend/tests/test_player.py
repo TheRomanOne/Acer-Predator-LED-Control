@@ -152,3 +152,19 @@ def test_last_frame_is_exposed_for_ui_preview() -> None:
 
     assert frame == {"z": [RED, RED]}
     assert player.last_frame == frame
+
+
+def test_play_and_reassert_switch_the_magkey_zone_off_each_time() -> None:
+    from led_studio.devices.magkey import MagKeyController
+    from led_studio.hid.sunrex import MagKeyEffect, pack_magkey_effect
+    from tests.fakes import FakeVendorTransport
+
+    zone, _ = make_zone()
+    vendor = FakeVendorTransport()
+    player = Player([zone.with_magkey(MagKeyController(vendor, sleep=lambda _: None))])
+    off = pack_magkey_effect(MagKeyEffect.OFF, brightness_pct=0, color=None)
+
+    player.play(solid())
+    player.reassert_control()
+
+    assert vendor.sent == off + off

@@ -39,7 +39,7 @@ class Player:
     def play(self, pattern: Pattern) -> None:
         if self.current is None:
             for zone in self._zones.values():
-                zone.array.take_control()
+                zone.take_control()
         self.current = pattern
         self._started_at = self._clock()
 
@@ -51,7 +51,7 @@ class Player:
         if self.current is None:
             return
         for zone in self._zones.values():
-            zone.array.take_control()
+            zone.take_control()
         self._shown.clear()
 
     def elapsed(self) -> float:
@@ -101,7 +101,7 @@ class Player:
             return
         for zone in self._zones.values():
             self.push(zone.id, [BLACK] * zone.array.lamp_count)
-            zone.array.release_control()
+            zone.release_control()
         self.current = None
         self.last_frame = {}
         self._shown.clear()
@@ -109,4 +109,4 @@ class Player:
     def close(self) -> None:
         self.stop()
         for zone in self._zones.values():
-            zone.array.close()
+            zone.close()
