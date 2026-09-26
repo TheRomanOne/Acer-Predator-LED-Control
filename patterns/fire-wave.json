@@ -1,0 +1,60 @@
+{
+  "name": "fire wave",
+  "layers": [
+    {
+      "effect": {
+        "type": "wave",
+        "colors": [
+          {
+            "r": 100,
+            "g": 10,
+            "b": 0
+          },
+          {
+            "r": 80,
+            "g": 3,
+            "b": 0
+          },
+          {
+            "r": 150,
+            "g": 15,
+            "b": 0
+          }
+        ],
+        "speed": 0.3,
+        "wavelength": 1.0,
+        "angle_deg": 15.0
+      },
+      "opacity": 1.0,
+      "devices": [
+        "0d62:a20a:1",
+        "0d62:a01a:1",
+        "05af:667a:0"
+      ],
+      "enabled": true
+    },
+    {
+      "effect": {
+        "type": "ripple",
+        "color": {
+          "r": 150,
+          "g": 20,
+          "b": 10
+        },
+        "origin_x": 0.47,
+        "origin_y": 0.49,
+        "period_s": 10.0,
+        "width": 0.17
+      },
+      "opacity": 1.0,
+      "devices": [
+        "0d62:a20a:1",
+        "0d62:a01a:1",
+        "05af:667a:0"
+      ],
+      "enabled": true
+    }
+  ],
+  "brightness": 1.0,
+  "id": "jpPOlQ9ldBA"
+}
