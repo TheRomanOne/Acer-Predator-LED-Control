@@ -94,6 +94,17 @@ painted on, and painting a different zone moves the layer there.
 The backend renders frames at 30 fps, sends only the lamps that changed, and streams the same
 frames to the browser for the live preview.
 
+## Saved patterns
+
+Patterns you save in the editor live in the data directory (see above), one JSON file per
+pattern. The ones worth keeping are checked in under `patterns/`; to load one on another
+machine, copy it into `%LOCALAPPDATA%\led-studio\patterns\` (Linux:
+`~/.local/share/led-studio/patterns/`) and restart the backend, or `POST` its contents to
+`/api/patterns` with the `id` field removed.
+
+- `patterns/fire-wave.json`: slow orange-red wave with a 10 s ripple across the ring, lid logo
+  and keyboard.
+
 ## Development
 
 ```bash
