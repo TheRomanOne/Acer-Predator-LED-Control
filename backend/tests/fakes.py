@@ -10,6 +10,7 @@ from led_studio.devices.layout import layout_from_array
 from led_studio.devices.zone import Zone
 from led_studio.hid.descriptor import LampArrayReportIds
 from led_studio.hid.reports import LampArrayAttributes, LampAttributes
+from led_studio.hid.sunrex import HOST_MODE, STATE_REPORT_ID
 from tests.test_descriptor import LAMPARRAY_DESCRIPTOR
 
 STANDARD_IDS = LampArrayReportIds(
@@ -133,8 +134,9 @@ class FakeLampArrayTransport:
 
 @dataclass
 class FakeVendorTransport:
-    """Records feature reports sent to a vendor-specific interface (no readable reports)."""
+    """The Sunrex keyboard's vendor interface: records commands, reports `mode` as active."""
 
+    mode: int = HOST_MODE
     sent: list[bytes] = field(default_factory=list)
     closed: bool = False
 
@@ -142,7 +144,11 @@ class FakeVendorTransport:
         return b""
 
     def get_feature_report(self, report_id: int, length: int) -> bytes:
-        raise OSError("fake vendor interface: nothing to read")
+        # Shape of the state report read from the PH16-73 keyboard (mode in byte 3).
+        report = bytes([0x00, 0x88, 0x00, self.mode, 0x03, 0x32, 0x00, 0x00, 0x00])
+        if (report_id, length) != (STATE_REPORT_ID, len(report)):
+            raise OSError(f"fake vendor interface: no report {report_id:#x} of {length} bytes")
+        return report
 
     def send_feature_report(self, report: bytes) -> None:
         self.sent.append(report)

@@ -155,16 +155,33 @@ def test_last_frame_is_exposed_for_ui_preview() -> None:
 
 
 def test_play_and_reassert_switch_the_magkey_zone_off_each_time() -> None:
-    from led_studio.devices.magkey import MagKeyController
+    from led_studio.devices.keyboard_vendor import KeyboardVendorInterface
     from led_studio.hid.sunrex import MagKeyEffect, pack_magkey_effect
     from tests.fakes import FakeVendorTransport
 
     zone, _ = make_zone()
     vendor = FakeVendorTransport()
-    player = Player([zone.with_magkey(MagKeyController(vendor, sleep=lambda _: None))])
+    player = Player([zone.with_vendor(KeyboardVendorInterface(vendor, sleep=lambda _: None))])
     off = pack_magkey_effect(MagKeyEffect.OFF, brightness_pct=0, color=None)
 
     player.play(solid())
     player.reassert_control()
 
     assert vendor.sent == off + off
+
+
+def test_reassert_hands_the_keyboard_back_when_a_firmware_effect_took_it_over() -> None:
+    from led_studio.devices.keyboard_vendor import KeyboardVendorInterface
+    from tests.fakes import FakeVendorTransport
+
+    zone, transport = make_zone()
+    vendor = FakeVendorTransport()
+    player = Player([zone.with_vendor(KeyboardVendorInterface(vendor, sleep=lambda _: None))])
+    player.play(solid())
+    transport.sent.clear()
+
+    vendor.mode = 0x01  # the Acer Lighting Service switched the keyboard to its STATIC effect
+    player.reassert_control()
+
+    # A repeated host-control request is ignored; only firmware -> host hands the keys back.
+    assert transport.sent == [bytes([0x70, 0x01]), bytes([0x70, 0x00])]  # release, take
