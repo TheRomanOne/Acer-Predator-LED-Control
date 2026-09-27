@@ -96,7 +96,7 @@ The two talk only over the HTTP/WebSocket API. Neither imports the other's code.
 
 RGB lighting control for the Acer Predator Helios 16 AI (PH16-73) on Windows and Ubuntu. Every
 lighting zone is a HID LampArray; the app drives it directly over hidapi (no WMI, no kernel
-module). `README.md` has the zone table, hardware notes and the MagKey (A/W/S/D) story.
+module). `README.md` has the zone table, hardware notes and the keyboard firmware-effect story.
 `INSTRUCTIONS.md` is the earlier long form of the rules above; the rules above win.
 
 ## Commands
@@ -138,9 +138,10 @@ Strict layering; each layer only imports the ones below it:
   hard-coded. Sunrex firmware stalls GET_REPORT unless the requested length is exact, so use
   the `*_REPORT_SIZE` constants. `hid/sunrex.py` is the separate Sunrex vendor protocol
   (usage page 0xFF02, four 9-byte unnumbered feature reports, ~15 ms apart, NOT-sum checksum).
-- `devices/`: `LampArray` (one HID collection, lamp-index addressed), `MagKeyController`
-  (vendor interface of the same keyboard), `Zone` (array + normalised layout + optional
-  MagKey). `open_zones()` is the single discovery entry point used by both `main` and `cli`.
+- `devices/`: `LampArray` (one HID collection, lamp-index addressed),
+  `KeyboardVendorInterface` (vendor interface of the same keyboard), `Zone` (array +
+  normalised layout + optional vendor interface). `open_zones()` is the single discovery entry
+  point used by both `main` and `cli`.
 - `patterns/`: `model.py` is the Pydantic schema of a pattern and is simultaneously the API
   contract and the on-disk format; `render.py` is a pure function
   (pattern, layouts, time) -> colours, floats in 0..1 until final quantisation.
@@ -168,11 +169,14 @@ Strict layering; each layer only imports the ones below it:
 
 ## Hardware behaviour worth knowing
 
-- Taking control = LampArrayControl autonomous=0 plus MagKey mode Off on the keyboard's
-  vendor interface. Releasing only sets autonomous=1; the MagKey mode is left off.
-- The Acer Lighting Service (`AcerLightingService`/`ALSSvc`) re-applies its profile from
-  `C:\ProgramData\OEM\AcerLightingService\LightingProfile\LightingProfile.ini` on its own
-  schedule (observed: right after resume from Modern Standby). Its keyboard-wide vendor
-  modes (wire values in that ini: `Direct`=0xFF, `STATIC`=1, ... `MAG_Off`=0x40) use the
-  same four-report framing as the MagKey commands with byte 3 of the colour report = 0
-  instead of 1. Only the MagKey range (0x40..0x4E) is currently modelled in `hid/sunrex.py`.
+- `Zone.take_control` (run on play and every second by the reassert) reads the keyboard's
+  active mode from the vendor interface's state report (byte 3; `0x33` = host updates shown).
+  Any other value is a keyboard-wide firmware effect, typically `STATIC` (0x01) re-applied by
+  the Acer Lighting Service from
+  `C:\ProgramData\OEM\AcerLightingService\LightingProfile\LightingProfile.ini`, e.g. right
+  after resume from standby. The firmware ignores a repeated autonomous=0 then; only an
+  autonomous=1 -> 0 transition hands the keys back, so take_control sends release + take.
+  It then switches the MagKey (A/W/S/D) effect off. Releasing only sets autonomous=1.
+- Vendor effect commands sent directly (four-report framing, colour-report byte 3 = 0 for the
+  whole keyboard) do not help: `0x01` STATIC and `0x00` off both override LampArray updates, and
+  `0x4F` (Acer's `MAG_Direct`) only affects the MagKey keys. Verified on the PH16-73.

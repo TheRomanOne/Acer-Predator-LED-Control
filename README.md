@@ -115,13 +115,21 @@ cd frontend && npm test && npm run typecheck && npm run lint
 Hardware access is isolated in `backend/led_studio/hid/transport.py`; everything above it is
 tested against an in-memory LampArray emulator (`backend/tests/fakes.py`).
 
-### The MagKey keys (A/W/S/D)
+### Firmware effects on the keyboard
 
-The swappable MagKey caps are a lighting zone of their own. PredatorSense gives them a separate
-mode (`ActiveMAGMode` in `C:\ProgramData\OEM\AcerLightingService\LightingProfile\LightingProfile.ini`)
-that its `SunrexUSBKeyboard.dll` sets over the keyboard's vendor HID interface (usage page
-`0xFF02`), and while that mode is active the firmware paints those four keys itself and ignores
-LampArray updates for them. LED Studio therefore switches the MagKey mode off every time it takes
-control of the keyboard (`backend/led_studio/hid/sunrex.py`, `backend/led_studio/devices/magkey.py`),
-after which A/W/S/D follow patterns like every other key. The mode stays off after **Stop**; the
-Acer Lighting Service restores PredatorSense's MagKey setting on its own schedule.
+The Sunrex keyboard runs firmware effects that override LampArray updates. PredatorSense sets
+them through its `SunrexUSBKeyboard.dll` over the keyboard's vendor HID interface (usage page
+`0xFF02`), and the Acer Lighting Service re-applies them from
+`C:\ProgramData\OEM\AcerLightingService\LightingProfile\LightingProfile.ini` on its own
+schedule (for example right after the laptop resumes from standby). LED Studio handles both
+kinds every time it takes control, and again every second while a pattern plays
+(`backend/led_studio/hid/sunrex.py`, `backend/led_studio/devices/keyboard_vendor.py`):
+
+- **Keyboard-wide effect** (`ActiveMode` in that file). While it runs, the firmware ignores a
+  repeated LampArray "host control" request, so the keyboard looks frozen or dark while the
+  other zones keep playing. Reading the vendor interface's feature report shows the active mode
+  (`0x33` while host updates are shown). When it reports anything else, LED Studio hands the
+  LampArray to the firmware and immediately takes it back, which returns the keys to it.
+- **MagKey effect** on the swappable A/W/S/D caps (`ActiveMAGMode`). While it is on, the
+  firmware paints those four keys itself. LED Studio switches it off, and it stays off after
+  **Stop**; the Acer Lighting Service restores PredatorSense's MagKey setting on its own schedule.

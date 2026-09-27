@@ -1,4 +1,4 @@
-"""Sunrex vendor lighting protocol, used for the keyboard's MagKey zone.
+"""Sunrex vendor lighting protocol: the keyboard's MagKey zone and its active lighting mode.
 
 On the PH16-73 the swappable MagKey caps (A/W/S/D) have their own lighting mode, separate from
 the per-key LampArray: PredatorSense sets it through `SunrexUSBKeyboard.dll` on the keyboard's
@@ -9,6 +9,11 @@ them. The wire format below is the one decompiled from that DLL by the predator-
 
 Every command is four 9-byte feature reports (leading 0x00 = no report ID), sent ~15 ms apart,
 each ending in a checksum that is the bitwise NOT of the wrapped sum of specific bytes.
+
+Reading the same interface's feature report returns the keyboard's lighting state, with the
+active mode in byte 3. Observed on this laptop: `HOST_MODE` while LampArray updates are shown,
+and the firmware effect's code (e.g. 0x01 STATIC, set by the Acer Lighting Service) while a
+keyboard-wide effect overrides them.
 """
 
 from enum import IntEnum
@@ -18,6 +23,10 @@ from led_studio.hid.reports import Rgb
 SUNREX_VENDOR_ID = 0x05AF
 SUNREX_VENDOR_USAGE_PAGE = 0xFF02
 REPORT_GAP_S = 0.015  # the vendor driver sleeps this long between the reports of one command
+STATE_REPORT_ID = 0x00
+STATE_REPORT_SIZE = 9
+HOST_MODE = 0x33
+_ACTIVE_MODE_BYTE = 3
 
 _MAX_BRIGHTNESS_PCT = 100
 _MAX_SPEED = 9
@@ -56,3 +65,12 @@ def pack_magkey_effect(
 
 def _checksum(*values: int) -> bytes:
     return bytes([~sum(values) & 0xFF])
+
+
+def unpack_active_mode(report: bytes) -> int:
+    """The keyboard's active lighting mode from a state report."""
+    if len(report) < STATE_REPORT_SIZE:
+        raise ValueError(
+            f"Sunrex state report too short: {len(report)} bytes, need {STATE_REPORT_SIZE}"
+        )
+    return report[_ACTIVE_MODE_BYTE]
